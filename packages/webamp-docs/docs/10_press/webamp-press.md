@@ -2,7 +2,7 @@
 
 This page lists various places where the Webamp project has been mentioned or discussed.
 
-For press mentions of the [Winamp Skin Museum](https://skins.webamp.org), see the [Winamp Skin Museum Press Page](./skin-museuem-press.md).
+For press mentions of the [Winamp Skin Museum](https://skins.webamp.org), see the [Winamp Skin Museum Press Page](./skin-museum-press.md).
 
 ## Articles (notable)
 
