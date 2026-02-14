@@ -2,6 +2,7 @@ import * as Skins from "../data/skins";
 import {
   AppBskyEmbedImages,
   AppBskyFeedPost,
+  AppBskyRichtextFacet,
   AtpAgent,
   BlobRef,
   RichText,
@@ -58,8 +59,6 @@ async function post(md5: string): Promise<string> {
   const url = skin.getMuseumUrl();
   const screenshotFileName = await skin.getScreenshotFileName();
 
-  const status = `${name}\n`; // TODO: Should we add hashtags?
-
   await agent.login({
     identifier: BLUESKY_USERNAME!,
     password: BLUESKY_PASSWORD!,
@@ -73,48 +72,34 @@ async function post(md5: string): Promise<string> {
     }
   );
 
+  const facets: AppBskyRichtextFacet.Main[] = [
+    {
+      $type: "app.bsky.richtext.facet",
+      index: {
+        byteStart: 0,
+        byteEnd: name.length,
+      },
+      features: [
+        {
+          $type: "app.bsky.richtext.facet#link",
+          uri: url,
+        },
+      ],
+    },
+  ];
+
   const postData = await buildPost(
-    agent,
-    status,
+    `${name} via the Winamp Skin Museum`,
+    facets,
     buildImageEmbed(blob, width * 2, height * 2)
   );
   const postResp = await agent.post(postData);
-  console.log(postResp);
 
   const postId = postResp.cid;
   const postUrl = postResp.uri;
 
   await Skins.markAsPostedToBlueSky(md5, postId, postUrl);
 
-  const prefix = "Try on the ";
-  const suffix = "Winamp Skin Museum";
-
-  agent.post({
-    text: prefix + suffix,
-    createdAt: new Date().toISOString(),
-    facets: [
-      {
-        $type: "app.bsky.richtext.facet",
-        index: {
-          byteStart: prefix.length,
-          byteEnd: prefix.length + suffix.length,
-        },
-        features: [
-          {
-            $type: "app.bsky.richtext.facet#link",
-            uri: url,
-          },
-        ],
-      },
-    ],
-    reply: {
-      root: postResp,
-      parent: postResp,
-    },
-    $type: "app.bsky.feed.post",
-  });
-
-  // return permalink;
   return postUrl;
 }
 
@@ -137,13 +122,10 @@ function buildImageEmbed(
 
 /** Build the post data for an image. */
 async function buildPost(
-  agent: AtpAgent,
-  rawText: string,
+  text: string,
+  facets: AppBskyRichtextFacet.Main[],
   imageEmbed: AppBskyEmbedImages.Main
 ): Promise<AppBskyFeedPost.Record> {
-  const rt = new RichText({ text: rawText });
-  await rt.detectFacets(agent);
-  const { text, facets } = rt;
   return {
     text,
     facets,
