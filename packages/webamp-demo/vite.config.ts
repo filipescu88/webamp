@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import nodePolyfills from "rollup-plugin-polyfill-node";
 
 export default defineConfig({
+  base: "/webamp/",
   build: {
     outDir: "dist",
     chunkSizeWarningLimit: 2500,
