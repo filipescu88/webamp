@@ -46,6 +46,23 @@ export function reverseList(): Action {
   return { type: "REVERSE_LIST" };
 }
 
+/** Opens the "jump to file" search panel over the track list. */
+export function openJumpToFile(): Action {
+  return { type: "OPEN_JUMP_TO_FILE" };
+}
+
+export function closeJumpToFile(): Action {
+  return { type: "CLOSE_JUMP_TO_FILE" };
+}
+
+/**
+ * Replaces the selection with exactly these tracks. Used to undo the selection
+ * a long press makes before it turns into a search.
+ */
+export function setSelectedTracks(ids: number[]): Action {
+  return { type: "SET_SELECTED_TRACKS", ids };
+}
+
 export function randomizeList(): Action {
   return { type: "RANDOMIZE_LIST" };
 }

@@ -348,6 +348,27 @@ export const getTrackDisplayName = createSelector(getTracks, (tracks) => {
   };
 });
 
+/** Whether the "jump to file" search panel is open. */
+export const getSearchOpen = (state: AppState): boolean =>
+  state.playlist.searchOpen;
+
+/**
+ * The whole playlist as searchable entries, in playlist order. Filtering them
+ * is left to the caller (`search.ts`), so typing does not need a reducer round
+ * trip per keystroke.
+ */
+export const getSearchEntries = createSelector(
+  getTracks,
+  getTrackOrder,
+  getTrackDisplayName,
+  (tracks, trackOrder, getDisplayName) =>
+    trackOrder.map((id, index) => ({
+      id,
+      index,
+      name: getDisplayName(id) || "",
+    }))
+);
+
 export const getCurrentTrackDisplayName = createSelector(
   getCurrentTrackId,
   getTrackDisplayName,
