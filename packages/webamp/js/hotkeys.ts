@@ -15,6 +15,7 @@ import {
   toggleDoubleSizeMode,
   toggleWindow,
   removeSelectedTracks,
+  openJumpToFile,
 } from "./actionCreators";
 
 import { Dispatch } from "./types";
@@ -87,6 +88,12 @@ export function bindHotkeys(dispatch: Dispatch): () => void {
           break;
         case 67: // C
           dispatch(pause());
+          break;
+        case 74: // J
+          dispatch(openJumpToFile());
+          // The field gets focused as the panel opens, so without this the "j"
+          // itself would be typed straight into the search box.
+          e.preventDefault();
           break;
         case 76: // L
           dispatch(openMediaFileDialog());

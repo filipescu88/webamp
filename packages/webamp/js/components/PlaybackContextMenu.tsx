@@ -12,6 +12,7 @@ const PlaybackContextMenu = () => {
   const seekForward = useActionCreator(Actions.seekForward);
   const seekBackward = useActionCreator(Actions.seekBackward);
   const nextN = useActionCreator(Actions.nextN);
+  const openJumpToFile = useActionCreator(Actions.openJumpToFile);
   return (
     <Fragment>
       <Node label="Previous" hotkey="Z" onClick={previous} />
@@ -39,10 +40,10 @@ const PlaybackContextMenu = () => {
     */}
       <Node label="10 tracks back" hotkey="Num. 1" onClick={() => nextN(-10)} />
       <Node label="10 tracks fwd" hotkey="Num. 3" onClick={() => nextN(10)} />
+      <Hr />
+      <Node label="Jump to file" hotkey="J" onClick={openJumpToFile} />
       {/*
-    <Hr />
     <Node label="Jump to time" hotkey="Ctrl+J" />
-    <Node label="Jump to file" hotkey="J" />
     */}
     </Fragment>
   );

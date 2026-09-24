@@ -447,6 +447,16 @@ export type Action =
       type: "INVERT_SELECTION";
     }
   | {
+      type: "SET_SELECTED_TRACKS";
+      ids: number[];
+    }
+  | {
+      type: "OPEN_JUMP_TO_FILE";
+    }
+  | {
+      type: "CLOSE_JUMP_TO_FILE";
+    }
+  | {
       type: "REMOVE_ALL_TRACKS";
     }
   | {

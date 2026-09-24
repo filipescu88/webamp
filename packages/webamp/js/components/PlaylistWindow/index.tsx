@@ -17,6 +17,8 @@ import ListMenu from "./ListMenu";
 import PlaylistResizeTarget from "./PlaylistResizeTarget";
 import PlaylistActionArea from "./PlaylistActionArea";
 import TrackList from "./TrackList";
+import JumpToFile from "./JumpToFile";
+import useLongPressToSearch from "./useLongPressToSearch";
 import PlaylistScrollBar from "./PlaylistScrollBar";
 
 import { AppState } from "../../types";
@@ -53,6 +55,10 @@ function PlaylistWindow({ analyser }: Props) {
   const scrollDownFourTracks = useActionCreator(Actions.scrollDownFourTracks);
   const scrollPlaylistByDelta = useActionCreator(Actions.scrollPlaylistByDelta);
   const loadMedia = useActionCreator(Actions.loadMedia);
+  const searchOpen = useTypedSelector(Selectors.getSearchOpen);
+
+  // On a touch screen, holding a finger on the playlist opens the search.
+  useLongPressToSearch();
 
   const showVisualizer = playlistSize[0] > 2;
   const activateVisualizer = !getWindowOpen(WINDOWS.MAIN);
@@ -121,7 +127,7 @@ function PlaylistWindow({ analyser }: Props) {
         <div className="playlist-middle draggable">
           <div className="playlist-middle-left draggable" />
           <div className="playlist-middle-center">
-            <TrackList />
+            {searchOpen ? <JumpToFile /> : <TrackList />}
           </div>
           <WinampButton className="playlist-middle-right draggable">
             <PlaylistScrollBar />

@@ -93,6 +93,100 @@
   overflow: hidden;
 }
 
+/* Jump to file: the search panel that covers the track list while it is open. */
+#webamp .jump-to-file {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+#webamp .jump-to-file-strip {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  height: 13px;
+  padding: 0 3px;
+  white-space: nowrap;
+}
+
+/* The field is the one thing that has to be tapped on a phone, so it gets a
+   little more room than a track row. */
+#webamp .jump-to-file-strip:first-child {
+  height: 16px;
+}
+
+#webamp .jump-to-file-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 11px;
+  margin: 0 4px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  caret-color: currentColor;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+#webamp .jump-to-file-count {
+  flex: 0 0 auto;
+}
+
+#webamp .jump-to-file-results {
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#webamp .jump-to-file-results::-webkit-scrollbar {
+  display: none;
+}
+
+#webamp .jump-to-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 13px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 13px;
+  letter-spacing: 0.5px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+#webamp .jump-to-file-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#webamp .jump-to-file-duration {
+  flex: 0 0 auto;
+  padding-left: 4px;
+}
+
+#webamp .jump-to-file-hint {
+  flex: 0 0 auto;
+  cursor: default;
+}
+
+/* On a touch screen there are no arrow keys, and no Esc to press: the hints
+   have to be tappable instead. */
+@media (pointer: coarse) {
+  #webamp .jump-to-file-hint:first-child,
+  #webamp .jump-to-file-key {
+    display: none;
+  }
+}
+
 #webamp .playlist-middle-right {
   background-repeat: repeat-y;
   background-position: top right;
