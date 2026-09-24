@@ -8,6 +8,7 @@ import {
   genArrayBufferFromFileReference,
   genMediaDuration,
   genMediaTags,
+  getDroppedFiles,
 } from "../fileUtils";
 import skinParser from "../skinParser";
 import {
@@ -39,8 +40,14 @@ const META_DATA_PRIORITY = 20;
 
 const loadQueue = new LoadQueue({ threads: 4 });
 
+/**
+ * Files to add to the playlist. Either straight from a drop/`<input>`, or
+ * collected while looking inside a dropped folder.
+ */
+type FileReferences = FileList | File[];
+
 export function addTracksFromReferences(
-  fileReferences: FileList,
+  fileReferences: FileReferences,
   loadStyle: LoadStyle,
   atIndex: number | undefined
 ): Thunk {
@@ -68,7 +75,7 @@ export function setFilesAddedHandler(
 const SKIN_FILENAME_MATCHER = new RegExp("(wsz|zip)$", "i");
 const EQF_FILENAME_MATCHER = new RegExp("eqf$", "i");
 export function loadFilesFromReferences(
-  fileReferences: FileList,
+  fileReferences: FileReferences,
   loadStyle: LoadStyle = LOAD_STYLE.PLAY,
   atIndex: number | undefined = undefined
 ): Thunk {
@@ -229,7 +236,11 @@ export function loadMedia(
   loadStyle: LoadStyle = LOAD_STYLE.NONE,
   atIndex = 0
 ): Thunk {
-  const { files } = e.dataTransfer;
+  const { dataTransfer } = e;
+  // Resolve the drop now, synchronously: `dataTransfer.items` (and the entries
+  // we get from it) is only readable while the drop event is being dispatched.
+  // Looking inside any dropped folders happens asynchronously, afterwards.
+  const filesPromise = getDroppedFiles(dataTransfer);
   return async (dispatch, getState, { handleTrackDropEvent }) => {
     if (handleTrackDropEvent) {
       const tracks = await handleTrackDropEvent(e);
@@ -239,7 +250,7 @@ export function loadMedia(
         return;
       }
     }
-    dispatch(loadFilesFromReferences(files, loadStyle, atIndex));
+    dispatch(loadFilesFromReferences(await filesPromise, loadStyle, atIndex));
   };
 }
 
