@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import ContextMenu from "./ContextMenu";
+import * as Selectors from "../selectors";
+import { useTypedSelector } from "../hooks";
 
 interface Props extends React.HTMLAttributes<HTMLDivElement> {
   renderMenu: () => React.ReactNode;
@@ -7,7 +9,7 @@ interface Props extends React.HTMLAttributes<HTMLDivElement> {
   bottom?: boolean;
 }
 
-function getNodeOffset(node: HTMLDivElement | null) {
+function getNodeOffset(node: HTMLDivElement | null, scale: number) {
   if (node == null) {
     return { top: 0, left: 0 };
   }
@@ -15,7 +17,11 @@ function getNodeOffset(node: HTMLDivElement | null) {
   const rect = node.getBoundingClientRect();
   const scrollLeft = window.pageXOffset || document.documentElement!.scrollLeft;
   const scrollTop = window.pageYOffset || document.documentElement!.scrollTop;
-  return { top: rect.top + scrollTop, left: rect.left + scrollLeft };
+  // Menus are positioned in unscaled units, so undo the display scale.
+  return {
+    top: (rect.top + scrollTop) / scale,
+    left: (rect.left + scrollLeft) / scale,
+  };
 }
 
 // Trigger a context menu relative to the child element when the user
@@ -26,6 +32,7 @@ function getNodeOffset(node: HTMLDivElement | null) {
 function ContextMenuTarget(props: Props) {
   const handleNode = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(false);
+  const scale = useTypedSelector(Selectors.getScale);
   useEffect(() => {
     if (!selected) {
       return;
@@ -52,11 +59,11 @@ function ContextMenuTarget(props: Props) {
 
   const offset = useMemo(() => {
     return selected
-      ? getNodeOffset(handleNode.current)
+      ? getNodeOffset(handleNode.current, scale)
       : // Kinda awkward. This is a nonsense return value since we only use
         //this value when we are selected.
         { top: 0, left: 0 };
-  }, [selected]);
+  }, [selected, scale]);
 
   const { renderMenu, children, top, bottom, ...passThroughProps } = props;
   return (

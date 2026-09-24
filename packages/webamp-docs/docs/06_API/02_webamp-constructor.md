@@ -124,6 +124,41 @@ const webamp = new Webamp({
 In keeping with the original Winamp, **double size mode does not apply to resizable windows like the equalizer or Milkdrop**.
 :::
 
+### `autoFitToViewport`
+
+A boolean indicating if Webamp should scale and arrange itself to fill the viewport. **Default:** `false`.
+
+This is useful when embedding Webamp in a small viewport, like a phone screen, where the windows would otherwise be rendered at their natural size (275px wide) in the middle of the screen.
+
+When enabled, Webamp:
+
+- scales the whole UI so that the widest open window fills the viewport, up to a maximum of 2x, and shrinks it if the viewport is narrower than a single window
+- grows the playlist to fill the space left over at the bottom, so the layout fills the screen without being cut off
+- keeps the layout centered as the viewport changes, i.e. on resize or orientation change
+
+```ts
+const webamp = new Webamp({
+  autoFitToViewport: true,
+  // ...other config options
+});
+```
+
+Because the playlist is resized to fill the leftover space whenever the viewport changes, any `size` given for the playlist in [`windowLayout`](#windowlayout) is ignored while auto-fit is enabled. Which windows are open is still up to you, so combining the two is useful to pick a layout for small screens:
+
+```ts
+const isSmallScreen = window.innerWidth < 700;
+
+const webamp = new Webamp({
+  autoFitToViewport: isSmallScreen,
+  windowLayout: {
+    main: { position: { top: 0, left: 0 } },
+    playlist: { position: { top: 116, left: 0 } },
+    // The equalizer does not fit on a phone screen...
+    equalizer: { position: { top: 116, left: 0 }, closed: isSmallScreen },
+  },
+});
+```
+
 ### `enableHotkeys`
 
 A boolean indicating if global hotkeys should be enabled. **Default:** `false`.

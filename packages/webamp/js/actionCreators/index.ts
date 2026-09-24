@@ -21,7 +21,9 @@ export {
   toggleLlamaMode,
   setFocusedWindow,
   setWindowLayout,
+  autoFitWindowsToViewport,
 } from "./windows";
+export { setDisplayScale, setAutoFitToViewport } from "./display";
 export {
   play,
   pause,

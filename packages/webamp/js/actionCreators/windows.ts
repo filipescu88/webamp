@@ -2,14 +2,16 @@ import * as Selectors from "../selectors";
 
 import * as Utils from "../utils";
 
+import { computeAutoFit, Viewport } from "../autoFit";
+import { WINDOWS } from "../constants";
 import { getPositionDiff, SizeDiff } from "../resizeUtils";
 import { applyDiff } from "../snapUtils";
+import { setDisplayScale } from "./display";
 import {
   Action,
   Thunk,
   WindowId,
   WindowPositions,
-  Dispatch,
   WindowLayout,
 } from "../types";
 
@@ -104,23 +106,69 @@ export function updateWindowPositions(
   return { type: "UPDATE_WINDOW_POSITIONS", positions, absolute };
 }
 
+/**
+ * Measure the space available to the windows. This is measured in CSS pixels,
+ * i.e. before the display scale is applied.
+ *
+ * This deliberately avoids both alternatives:
+ *
+ * - `Utils.getWindowSize()` reports the document's scroll size, which Webamp's
+ *   own windows inflate when they overflow the viewport, which would make the
+ *   measurement self-referential.
+ * - `document.documentElement.clientWidth` reports the *layout* viewport, which
+ *   can be much wider than the screen when a browser renders the page in a
+ *   "desktop" viewport (for example when the `viewport` meta tag is ignored).
+ *   Fitting to that would leave the UI hanging off the right edge.
+ *
+ * `visualViewport` reports what is actually visible, so the fitted UI can never
+ * be wider than the screen — not even when the user pinch-zooms.
+ */
+function getViewportSize(parentDomNode: HTMLElement): Viewport {
+  if (parentDomNode === document.body || !parentDomNode) {
+    const { documentElement } = document;
+    const visualViewport = window.visualViewport;
+    return {
+      width:
+        visualViewport?.width ||
+        documentElement.clientWidth ||
+        window.innerWidth,
+      height:
+        visualViewport?.height ||
+        documentElement.clientHeight ||
+        window.innerHeight,
+    };
+  }
+  return Utils.getElementSize(parentDomNode);
+}
+
 export function centerWindowsInContainer(
   container: HTMLElement,
   contained: boolean
 ): Thunk {
   return (dispatch, getState) => {
-    if (!Selectors.getPositionsAreRelative(getState())) {
+    const state = getState();
+    if (!Selectors.getPositionsAreRelative(state)) {
       return;
     }
+    // Window positions are in unscaled units, so the container has to be
+    // converted into those units before we can center within it.
+    const scale = Selectors.getScale(state);
     let left = 0;
     let top = 0;
     if (!contained) {
       const rect = container.getBoundingClientRect();
-      left = rect.left + window.scrollX;
-      top = rect.top + window.scrollY;
+      left = (rect.left + window.scrollX) / scale;
+      top = (rect.top + window.scrollY) / scale;
     }
-    const { scrollWidth: width, scrollHeight: height } = container;
-    dispatch(centerWindows({ left, top, width, height }));
+    const { scrollWidth, scrollHeight } = container;
+    dispatch(
+      centerWindows({
+        left,
+        top,
+        width: scrollWidth / scale,
+        height: scrollHeight / scale,
+      })
+    );
   };
 }
 
@@ -178,6 +226,53 @@ export function centerWindows({ left, top, width, height }: Box): Thunk {
   };
 }
 
+/**
+ * Scale and arrange the windows so that they fill the given viewport, growing
+ * the playlist to take up the leftover space.
+ *
+ * No-op unless `autoFitToViewport` is enabled.
+ */
+export function autoFitWindowsToViewport(parentDomNode: HTMLElement): Thunk {
+  return (dispatch, getState) => {
+    const state = getState();
+    if (!Selectors.getAutoFitToViewport(state)) {
+      // If auto-fit was just turned off, put the scale back.
+      if (Selectors.getScale(state) !== 1) {
+        dispatch(setDisplayScale(1));
+      }
+      return;
+    }
+
+    const { scale, viewport, playlistSize } = computeAutoFit({
+      viewport: getViewportSize(parentDomNode),
+      windows: state.windows.genWindows,
+    });
+
+    if (scale !== Selectors.getScale(state)) {
+      dispatch(setDisplayScale(scale));
+    }
+
+    if (playlistSize != null) {
+      const currentSize = state.windows.genWindows[WINDOWS.PLAYLIST].size;
+      if (
+        currentSize[0] !== playlistSize[0] ||
+        currentSize[1] !== playlistSize[1]
+      ) {
+        dispatch(setWindowSize(WINDOWS.PLAYLIST, playlistSize));
+      }
+    }
+
+    dispatch(
+      centerWindows({
+        left: 0,
+        top: 0,
+        width: viewport.width,
+        height: viewport.height,
+      })
+    );
+  };
+}
+
 export function browserWindowSizeChanged(
   size: {
     height: number;
@@ -185,8 +280,25 @@ export function browserWindowSizeChanged(
   },
   parentDomNode: HTMLElement
 ): Thunk {
-  return (dispatch: Dispatch) => {
-    dispatch({ type: "BROWSER_WINDOW_SIZE_CHANGED", ...size });
+  return (dispatch, getState) => {
+    // Auto-fit may change the scale, and the scale determines how much room
+    // the windows have to lay themselves out in. Note that auto-fit centers
+    // the layout itself, so we don't do it again here.
+    dispatch(autoFitWindowsToViewport(parentDomNode));
+
+    const state = getState();
+    const scale = Selectors.getScale(state);
+    // When auto-fit is on, `size` (the document's scroll size) is inflated by
+    // our own scaled windows, so measure the viewport instead.
+    const raw = Selectors.getAutoFitToViewport(state)
+      ? getViewportSize(parentDomNode)
+      : size;
+    const scaled = {
+      width: raw.width / scale,
+      height: raw.height / scale,
+    };
+
+    dispatch({ type: "BROWSER_WINDOW_SIZE_CHANGED", ...scaled });
     dispatch(ensureWindowsAreOnScreen(parentDomNode));
   };
 }
@@ -253,10 +365,12 @@ export function ensureWindowsAreOnScreen(parentDomNode: HTMLElement): Thunk {
 
     const windowsInfo = Selectors.getWindowsInfo(state);
     const getOpen = Selectors.getWindowOpen(state);
-    const { height, width } =
-      parentDomNode === document.body
-        ? Utils.getWindowSize()
-        : Utils.getElementSize(parentDomNode);
+    // Window positions are in unscaled units, so the viewport has to be
+    // converted into those units before comparing the two.
+    const scale = Selectors.getScale(state);
+    const measured = getViewportSize(parentDomNode);
+    const width = measured.width / scale;
+    const height = measured.height / scale;
     const bounding = Utils.calculateBoundingBox(
       windowsInfo.filter((w) => getOpen(w.key))
     );

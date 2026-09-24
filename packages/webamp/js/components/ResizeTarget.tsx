@@ -4,6 +4,8 @@ import {
   WINDOW_RESIZE_SEGMENT_HEIGHT,
 } from "../constants";
 import * as Utils from "../utils";
+import * as Selectors from "../selectors";
+import { useTypedSelector } from "../hooks";
 
 type Size = [number, number];
 
@@ -25,14 +27,17 @@ function ResizeTarget(props: Props) {
   const [mouseStart, setMouseStart] = useState<null | { x: number; y: number }>(
     null
   );
+  const scale = useTypedSelector(Selectors.getScale);
   useEffect(() => {
     if (mouseDown === false || mouseStart == null) {
       return;
     }
     const [width, height] = currentSize;
     const handleMove = (ee: MouseEvent | TouchEvent) => {
-      const x = Utils.getX(ee) - mouseStart.x;
-      const y = Utils.getY(ee) - mouseStart.y;
+      // The pointer moves in screen pixels, but window sizes are in unscaled
+      // units, so undo the display scale.
+      const x = (Utils.getX(ee) - mouseStart.x) / scale;
+      const y = (Utils.getY(ee) - mouseStart.y) / scale;
 
       const newWidth = Math.max(
         0,

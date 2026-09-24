@@ -46,6 +46,7 @@ export default function App({
   const closed = useTypedSelector(Selectors.getClosed);
   const genWindowsInfo = useTypedSelector(Selectors.getGenWindows);
   const zIndex = useTypedSelector(Selectors.getZIndex);
+  const scale = useTypedSelector(Selectors.getScale);
 
   const browserWindowSizeChanged = useActionCreator(
     Actions.browserWindowSizeChanged
@@ -63,6 +64,13 @@ export default function App({
   useLayoutEffect(() => {
     webampNode.style.zIndex = String(zIndex);
   }, [webampNode, zIndex]);
+
+  // The whole UI is scaled with a single transform. Note that this happens
+  // before the first paint, so the UI is never rendered at the wrong scale.
+  useLayoutEffect(() => {
+    webampNode.style.transformOrigin = "top left";
+    webampNode.style.transform = scale === 1 ? "" : `scale(${scale})`;
+  }, [webampNode, scale]);
 
   useLayoutEffect(() => {
     parentDomNode.appendChild(webampNode);

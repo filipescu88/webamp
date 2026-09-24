@@ -20,13 +20,54 @@ declare global {
 
 const DEFAULT_DOCUMENT_TITLE = document.title;
 
+/**
+ * Renders the measurements we need to debug viewport/sizing problems on a
+ * phone, where there is no dev tools. Enabled by adding `?debug` to the URL.
+ */
+function mountDebugOverlay() {
+  const node = document.createElement("div");
+  node.style.cssText = [
+    "position: fixed",
+    "left: 0",
+    "bottom: 0",
+    "z-index: 100000",
+    "background: #000",
+    "color: #0f0",
+    "font: 11px monospace",
+    "line-height: 1.4",
+    "padding: 4px 6px",
+    "white-space: pre",
+    "pointer-events: none",
+  ].join(";");
+  const render = () => {
+    const visualViewport = window.visualViewport;
+    const state = window.__webamp?.store.getState();
+    node.textContent = [
+      `inner  ${window.innerWidth} x ${window.innerHeight}`,
+      `client ${document.documentElement.clientWidth} x ${document.documentElement.clientHeight}`,
+      `visual ${Math.round(visualViewport?.width ?? 0)} x ${Math.round(
+        visualViewport?.height ?? 0
+      )} @ ${visualViewport?.scale ?? "-"}`,
+      `screen ${window.screen.width} x ${window.screen.height} dpr ${window.devicePixelRatio}`,
+      `scale  ${state == null ? "-" : state.display.scale.toFixed(3)}`,
+    ].join("\n");
+  };
+  render();
+  document.body.appendChild(node);
+  window.addEventListener("resize", render);
+  window.visualViewport?.addEventListener("resize", render);
+  window.visualViewport?.addEventListener("scroll", render);
+}
+
 let screenshot = false;
+let debug = false;
 let skinUrl = configSkinUrl;
 let backgroundColor: null | string = null;
 let soundcloudPlaylistId: null | string = null;
 if ("URLSearchParams" in window) {
   const params = new URLSearchParams(location.search);
   screenshot = Boolean(params.get("screenshot"));
+  debug = params.has("debug");
   skinUrl = params.get("skinUrl") || skinUrl;
   backgroundColor = params.get("bg");
   soundcloudPlaylistId = params.get("scPlaylist");
@@ -148,6 +189,10 @@ async function main() {
   await webamp.renderWhenReady(
     document.getElementById("app") as HTMLDivElement
   );
+
+  if (debug) {
+    mountDebugOverlay();
+  }
 
   // choreograph(webamp);
 

@@ -17,6 +17,7 @@ function TrackList() {
   const trackIds = useTypedSelector(Selectors.getVisibleTrackIds);
   const tracks = useTypedSelector(Selectors.getTracks);
   const numberOfTracks = useTypedSelector(Selectors.getNumberOfTracks);
+  const scale = useTypedSelector(Selectors.getScale);
 
   const selectZero = useActionCreator(Actions.selectZero);
   const dragSelected = useActionCreator(Actions.dragSelected);
@@ -46,7 +47,7 @@ function TrackList() {
         // Mouse is outside the track list
         return;
       }
-      const proposedDiff = Math.floor((y - mouseStartY) / TRACK_HEIGHT);
+      const proposedDiff = Math.floor((y - mouseStartY) / scale / TRACK_HEIGHT);
       if (proposedDiff !== lastDiff) {
         const diffDiff = proposedDiff - lastDiff;
         dragSelected(diffDiff);

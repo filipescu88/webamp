@@ -7,6 +7,7 @@ import { loggerMiddleware } from "./eventLogger";
 import * as SoundCloud from "./SoundCloud";
 
 import { Action, Options, AppState, WindowLayout } from "../../webamp/js/types";
+import { WINDOW_HEIGHT } from "../../webamp/js/constants";
 
 import { getButterchurnOptions } from "./butterchurnOptions";
 import dropboxFilePicker from "./dropboxFilePicker";
@@ -41,6 +42,18 @@ const NOISY_ACTION_TYPES = new Set([
 
 const MIN_MILKDROP_WIDTH = 725;
 
+/**
+ * Phones and other small/touch devices don't have room for the full window
+ * stack at its natural size, so instead of a fixed layout we let Webamp scale
+ * the UI up to fill the viewport and grow the playlist to fill the rest of the
+ * screen. See the `autoFitToViewport` option.
+ */
+function isSmallViewport(): boolean {
+  return (
+    window.innerWidth < 700 || window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 let lastActionType: string | null = null;
 
 // Filter out consecutive common actions
@@ -64,12 +77,33 @@ export async function getWebampConfig(
   soundCloudPlaylist: SoundCloud.SoundCloudPlaylist | null
 ): Promise<Options & PrivateOptions & InjectableDependencies> {
   let __butterchurnOptions;
-  let windowLayout: WindowLayout | undefined;
   if (isButterchurnSupported()) {
     const startWithMilkdropHidden = true;
 
     __butterchurnOptions = getButterchurnOptions(startWithMilkdropHidden);
+  }
 
+  let windowLayout: WindowLayout | undefined;
+  const autoFitToViewport = isSmallViewport();
+  if (autoFitToViewport) {
+    // Only the main window and the playlist, stacked so that the playlist
+    // starts right below the main window. Auto-fit grows the playlist to fill
+    // whatever is left of the screen, and scales the whole thing to fit the
+    // width. The equalizer and Milkdrop stay closed, since there is no room
+    // for them, but the user can still open them from the main window.
+    windowLayout = {
+      main: { position: { left: 0, top: 0 } },
+      equalizer: {
+        position: { left: 0, top: WINDOW_HEIGHT },
+        closed: true,
+      },
+      playlist: { position: { left: 0, top: WINDOW_HEIGHT } },
+      milkdrop: {
+        position: { left: 0, top: WINDOW_HEIGHT },
+        closed: true,
+      },
+    };
+  } else if (isButterchurnSupported()) {
     // Give the playlist roughly 3x its default height, but never more than
     // the browser viewport can fit: main (0..116) + equalizer (116..232) +
     // playlist (232..bottom). If the windows don't fit on screen,
@@ -145,6 +179,7 @@ export async function getWebampConfig(
       : undefined,
     availableSkins,
     windowLayout,
+    autoFitToViewport,
     filePickers: [
       dropboxFilePicker,
       {
