@@ -47,6 +47,7 @@ export default function App({
   const genWindowsInfo = useTypedSelector(Selectors.getGenWindows);
   const zIndex = useTypedSelector(Selectors.getZIndex);
   const scale = useTypedSelector(Selectors.getScale);
+  const searchOpen = useTypedSelector(Selectors.getSearchOpen);
 
   const browserWindowSizeChanged = useActionCreator(
     Actions.browserWindowSizeChanged
@@ -84,6 +85,12 @@ export default function App({
       if (webampNode == null) {
         return;
       }
+      if (searchOpen) {
+        // While the search panel is open, parts of the viewport changing size
+        // are the on-screen keyboard coming and going, not the user resizing
+        // the page. Refitting to that would rescale the whole UI mid-typing.
+        return;
+      }
       // It's a bit tricky to measure the "natural" size of the browser window.
       // Specifically we want to know how large the window would be without our
       // own Webamp windows influencing it. To achieve this, we temporarily make
@@ -108,7 +115,7 @@ export default function App({
     return () => {
       window.removeEventListener("resize", handleWindowResize);
     };
-  }, [parentDomNode, browserWindowSizeChanged, webampNode]);
+  }, [parentDomNode, browserWindowSizeChanged, webampNode, searchOpen]);
 
   useEffect(() => {
     if (onMount != null) {

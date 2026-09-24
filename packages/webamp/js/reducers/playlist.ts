@@ -6,6 +6,8 @@ export interface PlaylistState {
   lastSelectedIndex: number | null;
   currentTrack: number | null;
   selectedTracks: number[];
+  /** Whether the "jump to file" search panel is covering the track list. */
+  searchOpen: boolean;
 }
 
 const defaultPlaylistState: PlaylistState = {
@@ -13,6 +15,7 @@ const defaultPlaylistState: PlaylistState = {
   currentTrack: null,
   lastSelectedIndex: null,
   selectedTracks: [],
+  searchOpen: false,
 };
 
 const playlist = (
@@ -72,6 +75,21 @@ const playlist = (
         selectedTracks: state.trackOrder.filter(
           (id) => !state.selectedTracks.includes(id)
         ),
+      };
+    case "SET_SELECTED_TRACKS":
+      return {
+        ...state,
+        selectedTracks: [...(action as any).ids],
+      };
+    case "OPEN_JUMP_TO_FILE":
+      return {
+        ...state,
+        searchOpen: true,
+      };
+    case "CLOSE_JUMP_TO_FILE":
+      return {
+        ...state,
+        searchOpen: false,
       };
     case "REMOVE_ALL_TRACKS":
       // TODO: Consider disposing of ObjectUrls

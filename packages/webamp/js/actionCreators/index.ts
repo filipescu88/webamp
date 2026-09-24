@@ -92,6 +92,9 @@ export {
   selectAll,
   selectZero,
   invertSelection,
+  openJumpToFile,
+  closeJumpToFile,
+  setSelectedTracks,
 } from "./playlist";
 export {
   initializePresets,
