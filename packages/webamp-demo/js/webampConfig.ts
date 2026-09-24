@@ -26,6 +26,7 @@ import {
 
 import {
   initialState,
+  initialTracks as configuredInitialTracks,
 } from "./config";
 import screenshotInitialState from "./screenshotInitialState";
 import { InjectableDependencies, PrivateOptions } from "../../webamp/js/webampLazy";
@@ -176,7 +177,7 @@ export async function getWebampConfig(
       ? undefined
       : soundCloudPlaylist != null
       ? SoundCloud.tracksFromPlaylist(soundCloudPlaylist)
-      : undefined,
+      : configuredInitialTracks,
     availableSkins,
     windowLayout,
     autoFitToViewport,
