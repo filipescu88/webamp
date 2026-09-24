@@ -60,6 +60,11 @@ export default function useLongPressToSearch(): void {
     let swallowUntil = 0;
     let startPoint: { x: number; y: number } | null = null;
     let selectionBeforePress: number[] = [];
+    // True from the moment a finger goes down on the playlist until it comes
+    // back up. While this is set we eat `contextmenu`, because on Android the
+    // browser fires its own long-press menu at roughly the same moment our
+    // timer fires: whoever wins that race, the menu must not appear.
+    let pressActive = false;
 
     const cancel = () => {
       if (timer != null) {
@@ -69,7 +74,13 @@ export default function useLongPressToSearch(): void {
       startPoint = null;
     };
 
+    const endPress = () => {
+      pressActive = false;
+      cancel();
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
+      pressActive = true;
       const { searchOpen: open, selectedTracks: selected } = stateRef.current;
       if (open || e.touches.length !== 1) {
         cancel();
@@ -87,6 +98,14 @@ export default function useLongPressToSearch(): void {
         swallowUntil = Date.now() + SWALLOW_MS;
         stateRef.current.setSelectedTracks(selectionBeforePress);
         stateRef.current.openJumpToFile();
+        // If the browser's own long-press menu did open before this ran, the
+        // menu only closes on a click outside it or on a `contextmenu` on the
+        // body, so ask it to close itself.
+        setTimeout(() => {
+          document.body.dispatchEvent(
+            new MouseEvent("contextmenu", { bubbles: true, cancelable: true })
+          );
+        }, 120);
       }, LONG_PRESS_MS);
     };
 
@@ -108,7 +127,17 @@ export default function useLongPressToSearch(): void {
     };
 
     const handleEventToSwallow = (e: Event) => {
-      if (Date.now() < swallowUntil) {
+      const isMenu = e.type === "contextmenu";
+      // A touch long press means "search" on the playlist, so a touch
+      // `contextmenu` (Android's own long-press menu, which fires at its own
+      // moment and can land before, during or after our timer) is always
+      // swallowed. A right click with a mouse keeps its menu.
+      const fromTouch = isMenu && (e as PointerEvent).pointerType === "touch";
+      // A click is only swallowed in the moment right after a long press, so
+      // that the tap which follows cannot land on one of the results.
+      const swallowing =
+        Date.now() < swallowUntil || (isMenu && pressActive) || fromTouch;
+      if (swallowing) {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -116,16 +145,16 @@ export default function useLongPressToSearch(): void {
 
     node.addEventListener("touchstart", handleTouchStart, true);
     node.addEventListener("touchmove", handleTouchMove, true);
-    node.addEventListener("touchend", cancel, true);
-    node.addEventListener("touchcancel", cancel, true);
+    node.addEventListener("touchend", endPress, true);
+    node.addEventListener("touchcancel", endPress, true);
     node.addEventListener("click", handleEventToSwallow, true);
     node.addEventListener("contextmenu", handleEventToSwallow, true);
     return () => {
       cancel();
       node.removeEventListener("touchstart", handleTouchStart, true);
       node.removeEventListener("touchmove", handleTouchMove, true);
-      node.removeEventListener("touchend", cancel, true);
-      node.removeEventListener("touchcancel", cancel, true);
+      node.removeEventListener("touchend", endPress, true);
+      node.removeEventListener("touchcancel", endPress, true);
       node.removeEventListener("click", handleEventToSwallow, true);
       node.removeEventListener("contextmenu", handleEventToSwallow, true);
     };
