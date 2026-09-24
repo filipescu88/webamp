@@ -74,9 +74,10 @@ async function main() {
   about.classList.add("loaded");
 
   if (isButterchurnSupported()) {
-    (
-      document.getElementById("butterchurn-share") as HTMLDivElement
-    ).style.display = "flex";
+    const butterchurnShare = document.getElementById("butterchurn-share");
+    if (butterchurnShare != null) {
+      butterchurnShare.style.display = "flex";
+    }
   }
   let soundcloudPlaylist = null;
   if (soundcloudPlaylistId != null) {

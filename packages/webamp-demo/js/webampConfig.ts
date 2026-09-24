@@ -66,40 +66,43 @@ export async function getWebampConfig(
   let __butterchurnOptions;
   let windowLayout: WindowLayout | undefined;
   if (isButterchurnSupported()) {
-    const startWithMilkdropHidden = skinUrl != null || screenshot;
+    const startWithMilkdropHidden = true;
 
     __butterchurnOptions = getButterchurnOptions(startWithMilkdropHidden);
 
-    if (
-      startWithMilkdropHidden ||
-      document.body.clientWidth < MIN_MILKDROP_WIDTH
-    ) {
-      windowLayout = {
-        main: { position: { left: 0, top: 0 } },
-        equalizer: { position: { left: 0, top: 116 } },
-        playlist: {
-          position: { left: 0, top: 232 },
-          size: { extraHeight: 0, extraWidth: 0 },
-        },
-        milkdrop: {
-          position: { left: 0, top: 348 },
-          size: { extraHeight: 0, extraWidth: 0 },
-        },
-      };
-    } else {
-      windowLayout = {
-        main: { position: { left: 0, top: 0 } },
-        equalizer: { position: { left: 0, top: 116 } },
-        playlist: {
-          position: { left: 0, top: 232 },
-          size: { extraHeight: 4, extraWidth: 0 },
-        },
-        milkdrop: {
-          position: { left: 275, top: 0 },
-          size: { extraHeight: 12, extraWidth: 7 },
-        },
-      };
-    }
+    // Give the playlist roughly 3x its default height, but never more than
+    // the browser viewport can fit: main (0..116) + equalizer (116..232) +
+    // playlist (232..bottom). If the windows don't fit on screen,
+    // ensureWindowsAreOnScreen() resets all window sizes, so we must stay
+    // within the viewport ourselves.
+    const SEGMENT_PX = 29; // WINDOW_RESIZE_SEGMENT_HEIGHT
+    const PLAYLIST_TOP = 232;
+    const PLAYLIST_BASE_PX = 116; // window height at extraHeight: 0 (≈4 tracks)
+    const MARGIN_PX = 10;
+    const viewportHeight = window.innerHeight;
+    const availableForPlaylist = viewportHeight - PLAYLIST_TOP - MARGIN_PX;
+    // 3x the base window = base + 2 extra base-heights, converted to segments
+    const desiredSegments = Math.floor(
+      (PLAYLIST_BASE_PX * 3 - PLAYLIST_BASE_PX) / SEGMENT_PX
+    ); // = 8 segments ≈ 12 rows ≈ 3x the ≈4-row default
+    const maxSegments = Math.max(
+      0,
+      Math.floor((availableForPlaylist - PLAYLIST_BASE_PX) / SEGMENT_PX)
+    );
+    const extraHeight = Math.min(desiredSegments, maxSegments);
+
+    windowLayout = {
+      main: { position: { left: 0, top: 0 } },
+      equalizer: { position: { left: 0, top: 116 } },
+      playlist: {
+        position: { left: 0, top: 232 },
+        size: { extraHeight, extraWidth: 0 },
+      },
+      milkdrop: {
+        position: { left: 0, top: 348 },
+        size: { extraHeight: 0, extraWidth: 0 },
+      },
+    };
   }
 
   const initialSkin = !skinUrl ? undefined : { url: skinUrl };
