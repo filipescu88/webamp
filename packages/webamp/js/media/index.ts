@@ -5,6 +5,7 @@ import Emitter from "../emitter";
 import Disposable from "../Disposable";
 import StereoBalanceNode from "./StereoBalanceNode";
 import ElementSource from "./elementSource";
+import { resumeOnFirstUserGesture } from "./resumeContext";
 
 interface StereoBalanceNodeType extends AudioNode {
   constructor(context: AudioContext): StereoBalanceNodeType;
@@ -113,28 +114,7 @@ export default class Media implements IMedia {
     // https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
     // https://gist.github.com/laziel/7aefabe99ee57b16081c
     // Via: https://stackoverflow.com/a/43395068/1263117
-    if (this._context.state === "suspended") {
-      const resumeHandler = async () => {
-        await this._context.resume();
-
-        if (this._context.state === "running") {
-          document.body.removeEventListener("touchend", resumeHandler, false);
-          document.body.removeEventListener("click", resumeHandler, false);
-          document.body.removeEventListener("keydown", resumeHandler, false);
-        }
-      };
-
-      document.body.addEventListener("touchend", resumeHandler, false);
-      document.body.addEventListener("click", resumeHandler, false);
-      document.body.addEventListener("keydown", resumeHandler, false);
-
-      // Add cleanup for resume handlers
-      this._disposable.add(() => {
-        document.body.removeEventListener("touchend", resumeHandler, false);
-        document.body.removeEventListener("click", resumeHandler, false);
-        document.body.removeEventListener("keydown", resumeHandler, false);
-      });
-    }
+    this._disposable.add(resumeOnFirstUserGesture(this._context));
 
     // TODO: Maybe we can get rid of this now that we are using AudioAbstraction?
     this._staticSource = this._context.createGain(); // Just a noop node
