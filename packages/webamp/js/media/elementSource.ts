@@ -120,6 +120,16 @@ export default class ElementSource {
     if (this._status !== MEDIA_STATUS.PAUSED) {
       this.seekToTime(0);
     }
+    // The element's output is routed through the AudioContext, which stays
+    // suspended until the page has been interacted with. Playing while it is
+    // suspended leaves the element stalled at 0:00, so nudge the context
+    // awake. Deliberately not awaited: without user activation `resume()`
+    // doesn't settle, and playback must not wait on it.
+    if (this._context.state === "suspended") {
+      this._context.resume().catch(() => {
+        // Needs a user gesture, which we don't have. Nothing else to do.
+      });
+    }
     try {
       await this._audio.play();
       // TODO #race
