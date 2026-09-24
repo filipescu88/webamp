@@ -10,6 +10,7 @@ import DesktopLinkIcon from "./DesktopLinkIcon";
 import museumIcon from "../images/icons/internet-folder-32x32.png";
 import soundcloudIcon from "../images/icons/soundcloud-32x32.png";
 import { SoundCloudPlaylist } from "./SoundCloud";
+import RestorePlaylistBar from "./RestorePlaylistBar";
 // import MilkIcon from "./MilkIcon";
 
 interface Props {
@@ -78,6 +79,7 @@ const DemoDesktop = ({ webamp, soundCloudPlaylist }: Props) => {
         marginLeft: HORIZONTAL_MARGIN,
       }}
     >
+      <RestorePlaylistBar webamp={webamp} />
       <Suspense
         fallback={null /* Wait for all icons to load before showing any */}
       >

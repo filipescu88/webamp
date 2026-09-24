@@ -44,11 +44,25 @@ export function addTracksFromReferences(
   loadStyle: LoadStyle,
   atIndex: number | undefined
 ): Thunk {
-  const tracks: Track[] = Array.from(fileReferences).map((file) => ({
+  const files = Array.from(fileReferences);
+  // Let embedding apps persist locally-added files (drag&drop, ADD FILE,
+  // ADD DIR) so the playlist can be restored after a reload.
+  if (filesAddedHandler != null) {
+    filesAddedHandler(files);
+  }
+  const tracks: Track[] = files.map((file) => ({
     blob: file,
     defaultName: file.name,
   }));
   return loadMediaFiles(tracks, loadStyle, atIndex);
+}
+
+// See setFilesAddedHandler below.
+let filesAddedHandler: null | ((files: File[]) => void) = null;
+export function setFilesAddedHandler(
+  handler: null | ((files: File[]) => void)
+): void {
+  filesAddedHandler = handler;
 }
 
 const SKIN_FILENAME_MATCHER = new RegExp("(wsz|zip)$", "i");
@@ -153,8 +167,35 @@ export function openEqfFileDialog(): Thunk {
   return _openFileDialog(".eqf", "EQ");
 }
 
+// Allows embedding apps to replace the built-in media file dialog with their
+// own picker (e.g. one that persists the playlist). The handler returns the
+// picked tracks; the playlist is replaced and playback starts, matching the
+// behavior of the built-in dialog.
+let customMediaFileDialog: null | (() => Promise<Track[]>) = null;
+export function setCustomMediaFileDialog(
+  handler: null | (() => Promise<Track[]>)
+): void {
+  customMediaFileDialog = handler;
+}
+
 export function openMediaFileDialog(): Thunk {
-  return _openFileDialog(null, "MEDIA");
+  return async (dispatch) => {
+    if (customMediaFileDialog != null) {
+      const tracks = await customMediaFileDialog();
+      if (tracks.length > 0) {
+        dispatch(loadMediaFiles(tracks, LOAD_STYLE.PLAY));
+      }
+      return;
+    }
+    const fileReferences = await promptForFileReferences();
+    dispatch({
+      type: "OPENED_FILES",
+      expectedType: "MEDIA",
+      count: fileReferences.length,
+      firstFileName: fileReferences[0]?.name,
+    });
+    dispatch(loadFilesFromReferences(fileReferences));
+  };
 }
 
 export function openSkinFileDialog() {

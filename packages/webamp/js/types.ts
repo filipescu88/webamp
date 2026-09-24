@@ -697,28 +697,7 @@ export interface Options {
    *
    * For example, this option can be used to provide a "Dropbox" file picker.
    */
-  filePickers?: [
-    {
-      /**
-       * The name that will appear in the context menu.
-       *
-       * Example: `"My File Picker..."`
-       */
-      contextMenuName: string;
-
-      /**
-       * A function which returns a Promise that resolves to an array of `Track`s
-       *
-       * Example: `() => Promise.resolve([{ url: './rick_roll.mp3' }])`
-       */
-      filePicker: () => Promise<Track[]>;
-
-      /**
-       * Indicates if this options should be made available when the user is offline.
-       */
-      requiresNetwork: boolean;
-    }
-  ];
+  filePickers?: FilePicker[];
   zIndex?: number;
   handleTrackDropEvent?: (
     e: React.DragEvent<HTMLDivElement>

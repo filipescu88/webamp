@@ -14,6 +14,7 @@ import {
   previous,
   toggleDoubleSizeMode,
   toggleWindow,
+  removeSelectedTracks,
 } from "./actionCreators";
 
 import { Dispatch } from "./types";
@@ -104,6 +105,9 @@ export function bindHotkeys(dispatch: Dispatch): () => void {
           break;
         case 90: // Z
           dispatch(previous());
+          break;
+        case 46: // Delete — remove selected tracks from the playlist
+          dispatch(removeSelectedTracks());
           break;
         case 96: // numpad 0
           dispatch(openMediaFileDialog());

@@ -11,10 +11,24 @@ import { Action, Options, AppState, WindowLayout } from "../../webamp/js/types";
 import { getButterchurnOptions } from "./butterchurnOptions";
 import dropboxFilePicker from "./dropboxFilePicker";
 import availableSkins from "./availableSkins";
+import {
+  pickAndStoreLocalFiles,
+  getStoredLocalFiles,
+  resolveStoredFiles,
+  storeLocalFiles,
+  StoredEntry,
+} from "./localFiles";
+import {
+  setCustomMediaFileDialog,
+  setFilesAddedHandler,
+} from "../../webamp/js/actionCreators/files";
 
-import { initialTracks, initialState } from "./config";
+import {
+  initialState,
+} from "./config";
 import screenshotInitialState from "./screenshotInitialState";
 import { InjectableDependencies, PrivateOptions } from "../../webamp/js/webampLazy";
+import { playlistSyncMiddleware } from "./playlistSyncMiddleware";
 
 const NOISY_ACTION_TYPES = new Set([
   "STEP_MARQUEE",
@@ -90,6 +104,34 @@ export async function getWebampConfig(
 
   const initialSkin = !skinUrl ? undefined : { url: skinUrl };
 
+  // The Eject button, "File..." menu item and the "L" hotkey all route through
+  // openMediaFileDialog(). Point them at our local-file picker so that any way
+  // of adding files persists the playlist.
+  setCustomMediaFileDialog(async () => {
+    const entries = await pickAndStoreLocalFiles();
+    const files = await resolveStoredFiles(entries);
+    return files.map((file) => ({
+      blob: file,
+      defaultName: file.name,
+    }));
+  });
+
+  // Drag&drop, ADD FILE and ADD DIR go through addTracksFromReferences().
+  // Those operations APPEND to the playlist, so merge the new files into the
+  // stored snapshot (deduped by name) instead of replacing it — otherwise only
+  // the files from the last operation would be restored after a reload.
+  setFilesAddedHandler((files) => {
+    getStoredLocalFiles().then((stored) => {
+      const merged: StoredEntry[] = [...(stored ?? [])];
+      for (const file of files) {
+        if (!merged.some((e) => e.name === file.name && e.file != null)) {
+          merged.push({ name: file.name, file });
+        }
+      }
+      storeLocalFiles(merged);
+    });
+  });
+
   return {
     initialSkin,
     // eslint-disable-next-line no-nested-ternary
@@ -97,10 +139,24 @@ export async function getWebampConfig(
       ? undefined
       : soundCloudPlaylist != null
       ? SoundCloud.tracksFromPlaylist(soundCloudPlaylist)
-      : initialTracks,
+      : undefined,
     availableSkins,
     windowLayout,
-    filePickers: [dropboxFilePicker],
+    filePickers: [
+      dropboxFilePicker,
+      {
+        contextMenuName: "Pliki z dysku...",
+        filePicker: async () => {
+          const entries = await pickAndStoreLocalFiles();
+          const files = await resolveStoredFiles(entries);
+          return files.map((file) => ({
+            blob: file,
+            defaultName: file.name,
+          }));
+        },
+        requiresNetwork: false,
+      },
+    ],
     enableHotkeys: true,
     enableMediaSession: true,
     handleTrackDropEvent: (e) => {
@@ -123,7 +179,7 @@ export async function getWebampConfig(
       import(/* webpackChunkName: "music-metadata" */ "music-metadata"),
     __initialState: screenshot ? screenshotInitialState : initialState,
     __butterchurnOptions,
-    __customMiddlewares: [sentryMiddleware, loggerMiddleware],
+    __customMiddlewares: [sentryMiddleware, loggerMiddleware, playlistSyncMiddleware],
   };
 }
 
