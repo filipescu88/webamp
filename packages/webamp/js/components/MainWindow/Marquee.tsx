@@ -75,6 +75,7 @@ function useStepper({ step, dragging }: UseStepperArgs): void {
 
 // When user calls `handleMouseDown`, and moves the mouse, `dragOffset` will update as they drag.
 function useDragX() {
+  const scale = useTypedSelector(Selectors.getScale);
   const [mouseDownX, setMouseDownX] = React.useState<number | null>(null);
   const [dragOffset, setDragOffset] = React.useState(0);
 
@@ -84,7 +85,8 @@ function useDragX() {
     }
     const xStart = mouseDownX;
     const handleMouseMove = (ee: MouseEvent | TouchEvent) => {
-      const diff = Utils.getX(ee) - xStart;
+      // The text is laid out in unscaled units, so undo the display scale.
+      const diff = (Utils.getX(ee) - xStart) / scale;
       setDragOffset(-diff);
     };
 
@@ -108,7 +110,7 @@ function useDragX() {
     document.addEventListener("touchend", handleMouseUp);
 
     return handleMouseUp;
-  }, [mouseDownX]);
+  }, [mouseDownX, scale]);
 
   const handleMouseDown = React.useCallback(
     (

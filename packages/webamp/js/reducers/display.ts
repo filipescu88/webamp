@@ -15,6 +15,12 @@ import { DEFAULT_SKIN, VISUALIZER_ORDER } from "../constants";
 export interface DisplayState {
   visualizerStyle: number;
   doubled: boolean;
+  /**
+   * The scale that the whole UI is rendered at. Applied to the windows as a
+   * CSS transform, and to their layout sizes in `getWindowScales`.
+   */
+  scale: number;
+  autoFitToViewport: boolean;
   llama: boolean;
   disableMarquee: boolean;
   marqueeStep: number;
@@ -60,6 +66,8 @@ const defaultSkinGenExColors = {
 
 const defaultDisplayState = {
   doubled: false,
+  scale: 1,
+  autoFitToViewport: false,
   marqueeStep: 0,
   disableMarquee: false,
   loading: true,
@@ -108,6 +116,10 @@ const display = (
     }
     case "TOGGLE_DOUBLESIZE_MODE":
       return { ...state, doubled: !state.doubled };
+    case "SET_DISPLAY_SCALE":
+      return { ...state, scale: (action as any).scale };
+    case "SET_AUTO_FIT_TO_VIEWPORT":
+      return { ...state, autoFitToViewport: (action as any).enabled };
     case "TOGGLE_LLAMA_MODE":
       return { ...state, llama: !state.llama };
     case "STEP_MARQUEE":

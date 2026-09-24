@@ -38,6 +38,7 @@ function useHandleMouseDown(
   const windowsInfo = useTypedSelector(Selectors.getWindowsInfo);
   const getWindowHidden = useTypedSelector(Selectors.getWindowHidden);
   const browserWindowSize = useTypedSelector(Selectors.getBrowserWindowSize);
+  const scale = useTypedSelector(Selectors.getScale);
   const updateWindowPositions = useActionCreator(Actions.updateWindowPositions);
 
   const [draggingState, setDraggingState] = useState<DraggingState | null>(
@@ -51,9 +52,11 @@ function useHandleMouseDown(
     }
     const { boundingBox, moving, stationary, mouseStart } = draggingState;
     const handleMouseMove = (ee: MouseEvent | TouchEvent) => {
+      // The pointer moves in screen pixels, but the windows are positioned in
+      // unscaled units, so undo the display scale.
       const proposedDiff = {
-        x: Utils.getX(ee) - mouseStart.x,
-        y: Utils.getY(ee) - mouseStart.y,
+        x: (Utils.getX(ee) - mouseStart.x) / scale,
+        y: (Utils.getY(ee) - mouseStart.y) / scale,
       };
 
       const proposedWindows = moving.map((node) => ({
@@ -108,7 +111,13 @@ function useHandleMouseDown(
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchend", handleMouseUp);
     };
-  }, [parentDomNode, browserWindowSize, draggingState, updateWindowPositions]);
+  }, [
+    parentDomNode,
+    browserWindowSize,
+    draggingState,
+    updateWindowPositions,
+    scale,
+  ]);
 
   // Mouse down handler
   return useCallback(

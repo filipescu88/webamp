@@ -25,6 +25,8 @@ import {
   WINDOW_RESIZE_SEGMENT_WIDTH,
   WINDOW_RESIZE_SEGMENT_HEIGHT,
   WINDOW_WIDTH,
+  WINDOW_HEIGHT,
+  SHADE_WINDOW_HEIGHT,
   MEDIA_STATUS,
   MEDIA_TAG_REQUEST_STATUS,
   WINDOWS,
@@ -465,9 +467,6 @@ export const getPlaylistURL = createSelector(
     })
 );
 
-const WINDOW_HEIGHT = 116;
-const SHADE_WINDOW_HEIGHT = 14;
-
 function getWPixelSize(w: WebampWindow, doubled: boolean) {
   const [width, height] = w.size;
   const doubledMultiplier = doubled && w.canDouble ? 2 : 1;
@@ -503,6 +502,18 @@ export function getLlamaMode(state: AppState) {
 
 export function getZIndex(state: AppState): number {
   return state.display.zIndex;
+}
+
+/**
+ * The scale that the whole UI is rendered at. 1 unless auto-fit is enabled
+ * (or the embedder has set it explicitly).
+ */
+export function getScale(state: AppState): number {
+  return state.display.scale;
+}
+
+export function getAutoFitToViewport(state: AppState): boolean {
+  return state.display.autoFitToViewport;
 }
 
 // TODO: This is poorly memoized. It invalidates when a window moves.

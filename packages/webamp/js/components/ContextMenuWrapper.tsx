@@ -1,5 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import ContextMenu from "./ContextMenu";
+import * as Selectors from "../selectors";
+import { useTypedSelector } from "../hooks";
 
 interface Props {
   renderContents(): ReactNode;
@@ -23,6 +25,8 @@ export default function ContextMenuWraper({
     y: number;
   } | null>(null);
 
+  const scale = useTypedSelector(Selectors.getScale);
+
   const closeMenu = useCallback(() => {
     setOpenPosition(null);
   }, []);
@@ -38,14 +42,22 @@ export default function ContextMenuWraper({
 
   const handleRightClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const { pageX, pageY } = e;
+      const { pageX, pageY, currentTarget } = e;
+      // The menu is positioned in unscaled units, relative to the top left of
+      // the Webamp container, so convert the cursor's page position.
+      const rect = currentTarget.getBoundingClientRect();
+      const originX = rect.left + window.scrollX;
+      const originY = rect.top + window.scrollY;
       // TODO: We could do an initial render to see if the menu fits here
       // and do a second render if it does not.
-      setOpenPosition({ x: pageX, y: pageY });
+      setOpenPosition({
+        x: (pageX - originX) / scale,
+        y: (pageY - originY) / scale,
+      });
       e.preventDefault();
       e.stopPropagation();
     },
-    []
+    [scale]
   );
 
   // Add click-away listeners when window is open

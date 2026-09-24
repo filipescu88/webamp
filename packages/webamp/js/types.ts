@@ -357,6 +357,19 @@ export type Action =
       zIndex: number;
     }
   | {
+      /**
+       * The scale that the UI is rendered at. The windows are scaled by this
+       * factor with a CSS transform, so their layout sizes scale along with
+       * their rendered sizes.
+       */
+      type: "SET_DISPLAY_SCALE";
+      scale: number;
+    }
+  | {
+      type: "SET_AUTO_FIT_TO_VIEWPORT";
+      enabled: boolean;
+    }
+  | {
       type: "SET_DUMMY_VIZ_DATA";
       data: DummyVizData;
     }
@@ -682,6 +695,31 @@ export interface Options {
    * Default: `false`
    */
   enableDoubleSizeMode?: boolean;
+
+  /**
+   * Scale and arrange the windows so that they fill the viewport.
+   *
+   * This is useful for embedding Webamp in a small viewport, like a phone
+   * screen, where the windows would otherwise be rendered at their natural
+   * size in the middle of the screen.
+   *
+   * When enabled, Webamp:
+   *
+   * - scales the whole UI so that the widest open window fills the viewport
+   *   (never scaling up more than 2x, and shrinking if the viewport is
+   *   smaller than a single window)
+   * - grows the playlist to fill the space left over at the bottom, so that
+   *   the layout fills the screen without being cut off
+   * - keeps the layout centered as the viewport changes, i.e. on resize or
+   *   orientation change
+   *
+   * The playlist is resized to fill the leftover space on every change, so
+   * a `size` given for the playlist in `windowLayout` is ignored while
+   * auto-fit is enabled. Which windows are open is still up to you.
+   *
+   * Default: `false`
+   */
+  autoFitToViewport?: boolean;
 
   /**
    * Should global hotkeys be enabled?

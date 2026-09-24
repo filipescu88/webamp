@@ -41,6 +41,7 @@ export const CHARACTER_WIDTH = 5;
 export const WINDOW_RESIZE_SEGMENT_WIDTH = 25;
 export const WINDOW_RESIZE_SEGMENT_HEIGHT = 29;
 export const WINDOW_HEIGHT = 116;
+export const SHADE_WINDOW_HEIGHT = 14;
 export const WINDOW_WIDTH = 275;
 export const TRACK_HEIGHT = 13;
 export const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");

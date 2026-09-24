@@ -184,3 +184,15 @@ body {
 .desktop-icon.selected img {
   filter: brightness(0.35) sepia(100%) hue-rotate(148deg) saturate(10);
 }
+
+/* On small screens Webamp's auto-fit fills the viewport with the windows, so
+   there is no desktop left to put the icons on, and nothing to scroll. */
+@media (max-width: 700px), (pointer: coarse) {
+  #desktop {
+    display: none;
+  }
+  html,
+  body {
+    overflow: hidden;
+  }
+}

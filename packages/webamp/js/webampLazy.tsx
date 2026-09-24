@@ -93,6 +93,7 @@ class Webamp {
       handleLoadListEvent,
       handleSaveListEvent,
       enableDoubleSizeMode,
+      autoFitToViewport,
       __butterchurnOptions,
       __customMediaClass,
     } = this.options;
@@ -151,6 +152,10 @@ class Webamp {
 
     if (enableDoubleSizeMode) {
       this.store.dispatch(Actions.toggleDoubleSizeMode());
+    }
+
+    if (autoFitToViewport) {
+      this.store.dispatch(Actions.setAutoFitToViewport(true));
     }
 
     if (navigator.onLine) {
@@ -505,6 +510,11 @@ class Webamp {
 
   async _render(node: HTMLElement, contained: boolean): Promise<void> {
     this.store.dispatch(Actions.centerWindowsInContainer(node, contained));
+    // Now that we know where we are being rendered, let auto-fit scale the
+    // windows to the viewport, so that even the first paint is correct.
+    this.store.dispatch(
+      Actions.autoFitWindowsToViewport(contained ? node : document.body)
+    );
     await this.skinIsLoaded();
     if (this._disposable.disposed) {
       return;
