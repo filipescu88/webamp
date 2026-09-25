@@ -246,7 +246,13 @@ export function loadMedia(
       const tracks = await handleTrackDropEvent(e);
 
       if (tracks != null) {
-        dispatch(loadMediaFiles(tracks, loadStyle, atIndex));
+        // An empty result means the drop was handled and nothing is to be added.
+        // Loading zero tracks instead would empty the playlist, and falling
+        // through to the plain file handling would add the dropped file itself —
+        // which is how a dropped playlist became an unplayable playlist entry.
+        if (tracks.length > 0) {
+          dispatch(loadMediaFiles(tracks, loadStyle, atIndex));
+        }
         return;
       }
     }
@@ -463,13 +469,14 @@ export function addFilesFromUrl(atIndex = 0): Thunk {
     if (handleAddUrlEvent) {
       const tracks = await handleAddUrlEvent();
 
-      if (tracks != null) {
+      // An empty result means "handled, nothing to add" — not "empty the
+      // playlist", which is what loading zero tracks would do.
+      if (tracks != null && tracks.length > 0) {
         dispatch(loadMediaFiles(tracks, LOAD_STYLE.NONE, atIndex));
-        return;
       }
-    } else {
-      alert("Not supported in Webamp");
+      return;
     }
+    alert("Not supported in Webamp");
   };
 }
 
@@ -478,15 +485,14 @@ export function addFilesFromList(): Thunk {
     if (handleLoadListEvent) {
       const tracks = await handleLoadListEvent();
 
-      if (tracks != null) {
+      // As above: a list that yielded nothing must leave the playlist alone.
+      if (tracks != null && tracks.length > 0) {
         dispatch(removeAllTracks());
-
         dispatch(loadMediaFiles(tracks, LOAD_STYLE.NONE, 0));
-        return;
       }
-    } else {
-      alert("Not supported in Webamp");
+      return;
     }
+    alert("Not supported in Webamp");
   };
 }
 

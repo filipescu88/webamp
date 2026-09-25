@@ -28,6 +28,7 @@ import { isInstalledApp } from "./appMode";
 import { showNotice } from "./notice";
 import { confirmBar, promptForUrl } from "./winampPrompt";
 import {
+  forgetFileIfMissing,
   getKnownAndStoredFiles,
   getStoredListFile,
   hasWritePermissionNow,
@@ -210,39 +211,49 @@ async function loadListFromFile(): Promise<Track[] | null> {
 async function tracksFromPlaylistText(
   text: string,
   context: "load" | "drop"
-): Promise<{ tracks: Track[]; unknown: number; noAccess: number }> {
+): Promise<{
+  tracks: Track[];
+  unknown: number;
+  noAccess: number;
+  missing: number;
+}> {
   if (looksLikeHlsPlaylist(text)) {
     showNotice(
       "Ten plik to manifest strumienia (HLS), a nie lista odtwarzania Winampa."
     );
-    return { tracks: [], unknown: 0, noAccess: 0 };
+    return { tracks: [], unknown: 0, noAccess: 0, missing: 0 };
   }
   const entries = parsePlaylistFile(text);
   if (entries.length === 0) {
     showNotice("W tym pliku nie ma żadnych utworów.");
-    return { tracks: [], unknown: 0, noAccess: 0 };
+    return { tracks: [], unknown: 0, noAccess: 0, missing: 0 };
   }
-  const { tracks, unknown, noAccess } = await resolveEntries(entries);
-  const skipped = unknown + noAccess;
+  const { tracks, unknown, noAccess, missing } = await resolveEntries(entries);
+  const skipped = unknown + noAccess + missing;
   if (tracks.length === 0) {
-    showNotice(messageForNothingLoaded(unknown, noAccess));
-    return { tracks, unknown, noAccess };
+    showNotice(messageForNothingLoaded(unknown, noAccess, missing));
+    return { tracks, unknown, noAccess, missing };
   }
   const skippedNote =
     skipped === 0
       ? ""
-      : `, pominięto ${skipped} (${describeSkipped(unknown, noAccess)})`;
+      : `, pominięto ${skipped} (${describeSkipped(
+          unknown,
+          noAccess,
+          missing
+        )})`;
   const verb = context === "drop" ? "Dodano z listy" : "Wczytano listę";
   showNotice(
     `${verb}: ${tracks.length} ${trackWord(tracks.length)}${skippedNote}`
   );
-  return { tracks, unknown, noAccess };
+  return { tracks, unknown, noAccess, missing };
 }
 
 async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
   tracks: Track[];
   unknown: number;
   noAccess: number;
+  missing: number;
 }> {
   const stored = (await getKnownAndStoredFiles()) ?? [];
   const storedByName = new Map(stored.map((entry) => [entry.name, entry]));
@@ -288,10 +299,21 @@ async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
     // to the playlist that gets offered on the next start.
     await rememberLocalFiles(files);
   }
+  // A remembered file that has since been moved or deleted is forgotten here, so
+  // the memory heals itself instead of filling up with names that lead nowhere.
+  const forgotten = new Set<string>();
+  for (const entry of wanted.values()) {
+    if (!fileByName.has(entry.name)) {
+      if (await forgetFileIfMissing(entry)) {
+        forgotten.add(entry.name);
+      }
+    }
+  }
 
   const tracks: Track[] = [];
   let unknown = 0;
   let noAccess = 0;
+  let missing = 0;
   for (const entry of entries) {
     if (entry.kind === "url") {
       tracks.push(trackFromEntry(entry));
@@ -302,13 +324,15 @@ async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
       tracks.push(trackFromEntry(entry, file));
       continue;
     }
-    if (wanted.has(entry.value)) {
+    if (forgotten.has(entry.value)) {
+      missing += 1;
+    } else if (wanted.has(entry.value)) {
       noAccess += 1;
     } else {
       unknown += 1;
     }
   }
-  return { tracks, unknown, noAccess };
+  return { tracks, unknown, noAccess, missing };
 }
 
 /** 1 plik, 2 pliki, 5 plików. */
@@ -324,10 +348,17 @@ function fileWord(count: number): string {
   return "plików";
 }
 
-function describeSkipped(unknown: number, noAccess: number): string {
+function describeSkipped(
+  unknown: number,
+  noAccess: number,
+  missing: number
+): string {
   const parts: string[] = [];
   if (unknown > 0) {
     parts.push(`nie ma w pamięci aplikacji: ${unknown}`);
+  }
+  if (missing > 0) {
+    parts.push(`nie ma już na dysku: ${missing}`);
   }
   if (noAccess > 0) {
     parts.push(`brak dostępu do pliku: ${noAccess}`);
@@ -335,16 +366,24 @@ function describeSkipped(unknown: number, noAccess: number): string {
   return parts.join(", ");
 }
 
-function messageForNothingLoaded(unknown: number, noAccess: number): string {
-  if (unknown > 0 && noAccess === 0) {
+function messageForNothingLoaded(
+  unknown: number,
+  noAccess: number,
+  missing: number
+): string {
+  if (missing > 0 && unknown === 0 && noAccess === 0) {
+    return `Tych plików nie ma już na dysku (usunięte albo przeniesione): ${missing}. Dodaj je ponownie, jeśli nadal je masz.`;
+  }
+  if (unknown > 0 && noAccess === 0 && missing === 0) {
     return `Aplikacja nie pamięta tych plików z tej listy: ${unknown}. Dodaj je raz jeszcze (na przykład przez „Pliki z dysku…”) — zapamięta je i następnym razem wczytają się same.`;
   }
-  if (noAccess > 0 && unknown === 0) {
+  if (noAccess > 0 && unknown === 0 && missing === 0) {
     return `Nie ma dostępu do plików z tej listy: ${noAccess}. Dodaj je ponownie i zezwól na dostęp do plików.`;
   }
   return `Nie udało się wczytać żadnego utworu (${describeSkipped(
     unknown,
-    noAccess
+    noAccess,
+    missing
   )}).`;
 }
 
@@ -415,6 +454,10 @@ async function expandDroppedFiles(files: File[]): Promise<Track[]> {
       ...plainFiles.map((file) => ({ blob: file, defaultName: file.name }))
     );
   }
+  // An empty list, not null: the drop *was* ours (it contained a playlist file),
+  // and the library reads a returned list as "handled, load these". Null would
+  // fall through to the plain file handling, which adds the dropped playlist as
+  // an unplayable entry — the very thing this hook exists to prevent.
   return tracks;
 }
 

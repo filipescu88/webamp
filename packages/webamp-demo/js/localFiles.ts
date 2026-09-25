@@ -11,6 +11,8 @@
  * a snapshot — later edits to the files on disk are not picked up.
  */
 
+import { AUDIO_FILENAME_MATCHER } from "../../webamp/js/fileUtils";
+
 const DB_NAME = "webamp-local-files";
 const STORE = "handles";
 const KEY = "playlist";
@@ -252,16 +254,19 @@ export async function storeListFile(handle: any): Promise<void> {
  */
 export async function rememberLocalFiles(files: File[]): Promise<void> {
   const stored = (await getStoredLocalFiles()) ?? [];
-  const merged: StoredEntry[] = [...stored];
+  // Anything that is not music is dropped here too, so files added by accident
+  // (a dropped zip, a cover image, a cue sheet) do not linger in the memory.
+  const merged: StoredEntry[] = stored.filter(isMusicFile);
   for (const file of files) {
     if (
+      isMusicFile(file) &&
       !merged.some((entry) => entry.name === file.name && entry.file != null)
     ) {
       merged.push({ name: file.name, file });
     }
   }
   await storeLocalFiles(merged);
-  await rememberKnownFiles(files);
+  await rememberKnownFiles(files.filter(isMusicFile));
 }
 
 /**
@@ -276,7 +281,7 @@ export async function getKnownFiles(): Promise<StoredEntry[]> {
 
 async function rememberKnownFiles(files: File[]): Promise<void> {
   const known = await getKnownFiles();
-  const merged = [...known];
+  const merged = known.filter(isMusicFile);
   for (const file of files) {
     if (!merged.some((entry) => entry.name === file.name)) {
       merged.push({ name: file.name, file });
@@ -287,6 +292,51 @@ async function rememberKnownFiles(files: File[]): Promise<void> {
   // so the oldest are dropped once the list gets long.
   const trimmed = merged.slice(Math.max(0, merged.length - MAX_KNOWN_ENTRIES));
   await idbSet(KNOWN_KEY, trimmed);
+}
+
+/**
+ * Nothing that is not playable music belongs in either memory.
+ *
+ * `StoredEntry` and `File` both carry a name, so one predicate covers both.
+ */
+function isMusicFile(file: { name: string }): boolean {
+  return AUDIO_FILENAME_MATCHER.test(file.name);
+}
+
+/** Drop a file from both memories: the app can no longer reach it. */
+export async function forgetFile(name: string): Promise<void> {
+  const stored = (await getStoredLocalFiles()) ?? [];
+  await storeLocalFiles(stored.filter((entry) => entry.name !== name));
+  const known = await getKnownFiles();
+  await idbSet(
+    KNOWN_KEY,
+    known.filter((entry) => entry.name !== name)
+  );
+}
+
+/**
+ * Forget a remembered file if it has been moved or deleted since it was picked.
+ *
+ * Only a `NotFoundError` counts: the app may simply not be allowed to look right
+ * now, and the file is then perfectly fine — pruning it would lose a file the
+ * user still has.
+ */
+export async function forgetFileIfMissing(
+  entry: StoredEntry
+): Promise<boolean> {
+  if (entry.handle == null) {
+    return false; // A snapshot lives in IndexedDB; it cannot go missing.
+  }
+  try {
+    await entry.handle.getFile();
+    return false;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "NotFoundError") {
+      await forgetFile(entry.name);
+      return true;
+    }
+    return false;
+  }
 }
 
 /**
