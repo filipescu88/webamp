@@ -14,10 +14,8 @@ import dropboxFilePicker from "./dropboxFilePicker";
 import availableSkins from "./availableSkins";
 import {
   pickAndStoreLocalFiles,
-  getStoredLocalFiles,
+  rememberLocalFiles,
   resolveStoredFiles,
-  storeLocalFiles,
-  StoredEntry,
 } from "./localFiles";
 import {
   setCustomMediaFileDialog,
@@ -25,6 +23,7 @@ import {
 } from "../../webamp/js/actionCreators/files";
 import {
   handleAddUrlEvent,
+  handleDroppedListFiles,
   handleLoadListEvent,
   handleSaveListEvent,
 } from "./playlistListHandlers";
@@ -34,7 +33,10 @@ import {
   initialTracks as configuredInitialTracks,
 } from "./config";
 import screenshotInitialState from "./screenshotInitialState";
-import { InjectableDependencies, PrivateOptions } from "../../webamp/js/webampLazy";
+import {
+  InjectableDependencies,
+  PrivateOptions,
+} from "../../webamp/js/webampLazy";
 import { playlistSyncMiddleware } from "./playlistSyncMiddleware";
 
 const NOISY_ACTION_TYPES = new Set([
@@ -160,19 +162,12 @@ export async function getWebampConfig(
   });
 
   // Drag&drop, ADD FILE and ADD DIR go through addTracksFromReferences().
-  // Those operations APPEND to the playlist, so merge the new files into the
-  // stored snapshot (deduped by name) instead of replacing it — otherwise only
-  // the files from the last operation would be restored after a reload.
+  // Those operations APPEND to the playlist, so rememberLocalFiles() merges the
+  // new files into the stored snapshot (deduped by name) instead of replacing
+  // it — otherwise only the files from the last operation would be restored
+  // after a reload.
   setFilesAddedHandler((files) => {
-    getStoredLocalFiles().then((stored) => {
-      const merged: StoredEntry[] = [...(stored ?? [])];
-      for (const file of files) {
-        if (!merged.some((e) => e.name === file.name && e.file != null)) {
-          merged.push({ name: file.name, file });
-        }
-      }
-      storeLocalFiles(merged);
-    });
+    void rememberLocalFiles(files);
   });
 
   return {
@@ -209,6 +204,11 @@ export async function getWebampConfig(
     handleLoadListEvent,
     handleAddUrlEvent,
     handleTrackDropEvent: (e) => {
+      // A dropped playlist file is a list to load, not a track to add.
+      const listTracks = handleDroppedListFiles(e);
+      if (listTracks != null) {
+        return listTracks;
+      }
       const trackJson = e.dataTransfer.getData("text/json");
       if (trackJson == null) {
         return null;
@@ -228,7 +228,11 @@ export async function getWebampConfig(
       import(/* webpackChunkName: "music-metadata" */ "music-metadata"),
     __initialState: screenshot ? screenshotInitialState : initialState,
     __butterchurnOptions,
-    __customMiddlewares: [sentryMiddleware, loggerMiddleware, playlistSyncMiddleware],
+    __customMiddlewares: [
+      sentryMiddleware,
+      loggerMiddleware,
+      playlistSyncMiddleware,
+    ],
   };
 }
 
