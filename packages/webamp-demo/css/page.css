@@ -196,3 +196,18 @@ body {
     overflow: hidden;
   }
 }
+
+/* An installed app window has no web page around it, so the blue "desktop" is
+   just a frame around the player. Black matches the player itself and makes
+   whatever the fitted layout does not cover disappear. */
+@media (display-mode: standalone), (display-mode: minimal-ui),
+  (display-mode: window-controls-overlay), (display-mode: fullscreen) {
+  body {
+    background-color: #000;
+  }
+
+  /* The share buttons belong to the web page, not to the installed app. */
+  .about.loaded {
+    display: none;
+  }
+}
