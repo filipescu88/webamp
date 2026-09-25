@@ -108,12 +108,35 @@ export default function App({
       webampNode.style.overflow = "visible";
     };
 
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // Mobile browsers fire a burst of resize events while their toolbars slide
+    // in and out. Measuring in the middle of that gives a viewport the user
+    // never actually sees, and the layout then stays wrong until something else
+    // resizes — so give the dust a moment to settle first.
+    const scheduleWindowResize = () => {
+      if (timer != null) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(handleWindowResize, 150);
+    };
+
     handleWindowResize();
 
-    window.addEventListener("resize", handleWindowResize);
+    window.addEventListener("resize", scheduleWindowResize);
+    // A toolbar appearing or disappearing changes the visual viewport without
+    // necessarily resizing the window, and the visual viewport is what we fit
+    // into, so we have to listen to it separately.
+    window.visualViewport?.addEventListener("resize", scheduleWindowResize);
 
     return () => {
-      window.removeEventListener("resize", handleWindowResize);
+      if (timer != null) {
+        clearTimeout(timer);
+      }
+      window.removeEventListener("resize", scheduleWindowResize);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        scheduleWindowResize
+      );
     };
   }, [parentDomNode, browserWindowSizeChanged, webampNode, searchOpen]);
 

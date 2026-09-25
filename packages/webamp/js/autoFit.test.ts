@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { computeAutoFit, getNativeWindowSize } from "./autoFit";
+import { computeAutoFit, getFittingBox, getNativeWindowSize } from "./autoFit";
 import { WebampWindow } from "./reducers/windows";
 import {
   WINDOW_HEIGHT,
@@ -51,6 +51,73 @@ describe("getNativeWindowSize", () => {
 
   it("is the shade height when the window is shaded", () => {
     expect(getNativeWindowSize(window({ shade: true })).height).toBe(14);
+  });
+});
+
+describe("getFittingBox", () => {
+  it("returns the box when the browser reports no visual viewport", () => {
+    expect(getFittingBox(PHONE, null)).toEqual(PHONE);
+  });
+
+  it("returns the box when the visual viewport is empty", () => {
+    expect(getFittingBox(PHONE, { width: 0, height: 0 })).toEqual(PHONE);
+  });
+
+  it("clamps to the visible part when toolbars take space", () => {
+    // A container can be as tall as the layout viewport, which on a phone
+    // includes the space behind the browser toolbar and the system navigation
+    // bar. Only the visual viewport is really visible.
+    expect(getFittingBox(PHONE, { width: 390, height: 664 })).toEqual({
+      width: 390,
+      height: 664,
+    });
+  });
+
+  it("keeps a container that is smaller than the visual viewport", () => {
+    expect(
+      getFittingBox({ width: 300, height: 400 }, { width: 390, height: 844 })
+    ).toEqual({ width: 300, height: 400 });
+  });
+});
+
+describe("computeAutoFit layout size", () => {
+  it("reports the layout with the playlist already grown", () => {
+    const { layoutSize, playlistSize } = computeAutoFit({
+      viewport: PHONE,
+      windows: stackedLayout(),
+    });
+    expect(playlistSize).not.toBeNull();
+    expect(layoutSize.width).toBe(WINDOW_WIDTH);
+    expect(layoutSize.height).toBe(
+      2 * WINDOW_HEIGHT +
+        (playlistSize as [number, number])[1] * WINDOW_RESIZE_SEGMENT_HEIGHT
+    );
+  });
+
+  it("fills the viewport height to within one resize step", () => {
+    // The playlist can only be resized in whole segments, so the layout never
+    // matches the viewport exactly: the leftover belongs below it.
+    const { scale, layoutSize } = computeAutoFit({
+      viewport: PHONE,
+      windows: stackedLayout(),
+    });
+    const scaledHeight = layoutSize.height * scale;
+    expect(scaledHeight).toBeLessThanOrEqual(PHONE.height);
+    expect(PHONE.height - scaledHeight).toBeLessThan(
+      WINDOW_RESIZE_SEGMENT_HEIGHT * scale
+    );
+  });
+
+  it("reports the bare layout when the playlist cannot grow", () => {
+    const { layoutSize, playlistSize } = computeAutoFit({
+      viewport: PHONE,
+      windows: {
+        main: window(),
+        playlist: window({ position: { x: 0, y: WINDOW_HEIGHT } }),
+      },
+    });
+    expect(playlistSize).toBeNull();
+    expect(layoutSize.height).toBe(WINDOW_HEIGHT * 2);
   });
 });
 
@@ -176,7 +243,12 @@ describe("computeAutoFit", () => {
       viewport: PHONE,
       windows: { main: window({ open: false }) },
     });
-    expect(result).toEqual({ scale: 1, viewport: PHONE, playlistSize: null });
+    expect(result).toEqual({
+      scale: 1,
+      viewport: PHONE,
+      playlistSize: null,
+      layoutSize: { width: 0, height: 0 },
+    });
   });
 
   it("does nothing when the viewport has not been measured yet", () => {
@@ -185,6 +257,7 @@ describe("computeAutoFit", () => {
       scale: 1,
       viewport,
       playlistSize: null,
+      layoutSize: { width: 0, height: 0 },
     });
   });
 });

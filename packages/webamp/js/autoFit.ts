@@ -30,6 +30,27 @@ export function getNativeWindowSize(w: WebampWindow): Viewport {
   };
 }
 
+/**
+ * The box the UI has to fit into.
+ *
+ * On a phone the visual viewport is what is actually visible: an element's own
+ * box, and the document's, can include the space behind the browser's toolbars.
+ * So when the browser tells us the visual viewport, we fit into whichever of
+ * the two boxes is smaller.
+ */
+export function getFittingBox(
+  box: Viewport,
+  visual: Viewport | null
+): Viewport {
+  if (visual == null || visual.width <= 0 || visual.height <= 0) {
+    return box;
+  }
+  return {
+    width: Math.min(box.width, visual.width),
+    height: Math.min(box.height, visual.height),
+  };
+}
+
 export interface AutoFitResult {
   /** The transform scale to apply to the whole UI. */
   scale: number;
@@ -44,6 +65,13 @@ export interface AutoFitResult {
    * (closed, shaded, or not resizable).
    */
   playlistSize: [number, number] | null;
+  /**
+   * The size of the whole layout in unscaled units, after the playlist has been
+   * grown. The caller pins the layout to the top of the viewport with this:
+   * centering it would split the leftover from the playlist's coarse resize
+   * steps into a strip above and below the UI.
+   */
+  layoutSize: Viewport;
 }
 
 interface Input {
@@ -69,7 +97,12 @@ export function computeAutoFit({
 }: Input): AutoFitResult {
   const open = Object.values(windows).filter((w) => w.open);
   if (open.length === 0 || viewport.width <= 0 || viewport.height <= 0) {
-    return { scale: 1, viewport, playlistSize: null };
+    return {
+      scale: 1,
+      viewport,
+      playlistSize: null,
+      layoutSize: { width: 0, height: 0 },
+    };
   }
 
   const playlist = windows[WINDOWS.PLAYLIST];
@@ -95,6 +128,21 @@ export function computeAutoFit({
   const right = Math.max(...boxes.map((b) => b.left + b.width));
   const contentWidth = right - left;
   const playlistTop = playlist == null ? 0 : playlist.position.y - top;
+  const currentPlaylistHeight =
+    playlist == null ? 0 : getNativeWindowSize(playlist).height;
+
+  /** The layout's bounding size, with the playlist at the given height. */
+  const layoutSizeFor = (playlistHeight: number): Viewport => ({
+    width: Math.max(...boxes.map((b) => b.left + b.width)) - left,
+    height:
+      Math.max(
+        ...boxes.map((b) =>
+          b.window === playlist && !b.window.shade
+            ? b.top + playlistHeight
+            : b.top + b.height
+        )
+      ) - top,
+  });
 
   // Fill the width, but never scale up beyond `maxScale`.
   let scale = Math.min(maxScale, viewport.width / contentWidth);
@@ -113,7 +161,12 @@ export function computeAutoFit({
   }
   if (!(scale > 0)) {
     // Degenerate input (zero height, NaN, ...). Render something sane instead.
-    return { scale: 1, viewport, playlistSize: null };
+    return {
+      scale: 1,
+      viewport,
+      playlistSize: null,
+      layoutSize: layoutSizeFor(currentPlaylistHeight),
+    };
   }
 
   const scaledViewport = {
@@ -134,5 +187,14 @@ export function computeAutoFit({
     playlistSize = [playlist.size[0], Math.max(0, extra)];
   }
 
-  return { scale, viewport: scaledViewport, playlistSize };
+  return {
+    scale,
+    viewport: scaledViewport,
+    playlistSize,
+    layoutSize: layoutSizeFor(
+      playlistSize == null
+        ? currentPlaylistHeight
+        : WINDOW_HEIGHT + playlistSize[1] * WINDOW_RESIZE_SEGMENT_HEIGHT
+    ),
+  };
 }
