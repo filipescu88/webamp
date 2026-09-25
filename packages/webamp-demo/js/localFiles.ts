@@ -193,6 +193,32 @@ export async function resolveStoredFiles(
 }
 
 /**
+ * Snapshot entries (`file`) can always be read. A handle whose permission is
+ * only "prompt" needs a user gesture, so the caller has to ask for one.
+ */
+export type ReadPermission = "granted" | "prompt" | "denied";
+
+export async function readPermissionOf(
+  entry: StoredEntry
+): Promise<ReadPermission> {
+  if (entry.handle == null) {
+    return entry.file instanceof File ? "granted" : "denied";
+  }
+  try {
+    if (typeof entry.handle.queryPermission !== "function") {
+      return "denied";
+    }
+    const state = await entry.handle.queryPermission({ mode: "read" });
+    if (state === "granted") {
+      return "granted";
+    }
+    return state === "prompt" ? "prompt" : "denied";
+  } catch {
+    return "denied";
+  }
+}
+
+/**
  * The playlist file the user last saved to, so that saving again overwrites
  * that file instead of asking for a location every time — which is how Winamp
  * behaves. Kept in the same store as the local-file entries.

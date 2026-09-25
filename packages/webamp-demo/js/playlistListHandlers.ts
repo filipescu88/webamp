@@ -26,10 +26,11 @@ import {
 import { AppState, PlaylistTrack, Track } from "../../webamp/js/types";
 import { isInstalledApp } from "./appMode";
 import { showNotice } from "./notice";
-import { promptForUrl } from "./winampPrompt";
+import { confirmBar, promptForUrl } from "./winampPrompt";
 import {
   getStoredListFile,
   getStoredLocalFiles,
+  readPermissionOf,
   resolveStoredFiles,
   storeListFile,
   StoredEntry,
@@ -218,28 +219,27 @@ async function loadListFromFile(): Promise<Track[] | null> {
     showNotice("W tym pliku nie ma żadnych utworów.");
     return null;
   }
-  const { tracks, skipped } = await resolveEntries(entries);
+  const { tracks, unknown, noAccess } = await resolveEntries(entries);
+  const skipped = unknown + noAccess;
   if (tracks.length === 0) {
-    showNotice(
-      skipped === 1
-        ? "Nie udało się wczytać listy: jedyny utwór to plik lokalny, którego aplikacja już nie pamięta."
-        : `Nie udało się wczytać listy: ${skipped} plików lokalnych, których aplikacja już nie pamięta.`
-    );
+    showNotice(messageForNothingLoaded(unknown, noAccess));
     return null;
   }
   const skippedNote =
     skipped === 0
       ? ""
-      : `, pominięto ${skipped} (pliki lokalne, których aplikacja nie pamięta)`;
+      : `, pominięto ${skipped} (${describeSkipped(unknown, noAccess)})`;
   showNotice(
     `Wczytano listę: ${tracks.length} ${trackWord(tracks.length)}${skippedNote}`
   );
   return tracks;
 }
 
-async function resolveEntries(
-  entries: ParsedPlaylistEntry[]
-): Promise<{ tracks: Track[]; skipped: number }> {
+async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
+  tracks: Track[];
+  unknown: number;
+  noAccess: number;
+}> {
   const stored = (await getStoredLocalFiles()) ?? [];
   const storedByName = new Map(stored.map((entry) => [entry.name, entry]));
   const wanted = new Map<string, StoredEntry>();
@@ -252,28 +252,91 @@ async function resolveEntries(
       wanted.set(entry.value, match);
     }
   }
-  // One pass over the wanted files, so the browser asks for access once.
-  const files =
-    wanted.size === 0
-      ? []
-      : await resolveStoredFiles(Array.from(wanted.values()));
+
+  // Separate the files that may be read right now from the ones that need the
+  // user to grant access. Granting requires a real click: a permission prompt
+  // asked for after the file dialog has closed is silently denied, which is why
+  // this is an explicit step of its own rather than part of the load.
+  let files: File[] = [];
+  const needsPermission: StoredEntry[] = [];
+  for (const entry of wanted.values()) {
+    const permission = await readPermissionOf(entry);
+    if (permission === "granted") {
+      files = files.concat(await resolveStoredFiles([entry]));
+    } else if (permission === "prompt") {
+      needsPermission.push(entry);
+    }
+  }
+  if (needsPermission.length > 0) {
+    const connected = await confirmBar({
+      message: `Aplikacja pamięta ${needsPermission.length} ${fileWord(
+        needsPermission.length
+      )} z tej listy. Przyznać dostęp do plików na dysku?`,
+      buttonLabel: "Przyznaj dostęp",
+    });
+    if (connected) {
+      files = files.concat(await resolveStoredFiles(needsPermission));
+    }
+  }
   const fileByName = new Map(files.map((file) => [file.name, file]));
 
   const tracks: Track[] = [];
-  let skipped = 0;
+  let unknown = 0;
+  let noAccess = 0;
   for (const entry of entries) {
     if (entry.kind === "url") {
       tracks.push(trackFromEntry(entry));
       continue;
     }
     const file = fileByName.get(entry.value);
-    if (file == null) {
-      skipped += 1;
+    if (file != null) {
+      tracks.push(trackFromEntry(entry, file));
       continue;
     }
-    tracks.push(trackFromEntry(entry, file));
+    if (wanted.has(entry.value)) {
+      noAccess += 1;
+    } else {
+      unknown += 1;
+    }
   }
-  return { tracks, skipped };
+  return { tracks, unknown, noAccess };
+}
+
+/** 1 plik, 2 pliki, 5 plików. */
+function fileWord(count: number): string {
+  if (count === 1) {
+    return "plik";
+  }
+  const last = count % 10;
+  const tens = count % 100;
+  if (last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14)) {
+    return "pliki";
+  }
+  return "plików";
+}
+
+function describeSkipped(unknown: number, noAccess: number): string {
+  const parts: string[] = [];
+  if (unknown > 0) {
+    parts.push(`nie ma w pamięci aplikacji: ${unknown}`);
+  }
+  if (noAccess > 0) {
+    parts.push(`brak dostępu do pliku: ${noAccess}`);
+  }
+  return parts.join(", ");
+}
+
+function messageForNothingLoaded(unknown: number, noAccess: number): string {
+  if (unknown > 0 && noAccess === 0) {
+    return `Aplikacja nie pamięta tych plików z tej listy: ${unknown}. Dodaj je raz jeszcze (na przykład przez „Pliki z dysku…”) — zapamięta je i następnym razem wczytają się same.`;
+  }
+  if (noAccess > 0 && unknown === 0) {
+    return `Nie ma dostępu do plików z tej listy: ${noAccess}. Dodaj je ponownie i zezwól na dostęp do plików.`;
+  }
+  return `Nie udało się wczytać żadnego utworu (${describeSkipped(
+    unknown,
+    noAccess
+  )}).`;
 }
 
 function trackFromEntry(entry: ParsedPlaylistEntry, file?: File): Track {
