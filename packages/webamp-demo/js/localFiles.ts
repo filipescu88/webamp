@@ -23,7 +23,12 @@ const LIST_FILE_KEY = "listFile";
 // have different lifetimes: clearing or trimming the playlist must not make the
 // app forget a file that a saved list still refers to.
 const KNOWN_KEY = "known";
-const MAX_KNOWN_ENTRIES = 500;
+// Guards against unbounded growth, per kind of entry: one holding a file handle
+// is tiny, one holding a snapshot of the file's contents is not. Oldest entries
+// go first. A playlist itself has no such limit — a folder of a thousand tracks
+// loads all of them — so these only bound what the app can find again later.
+const MAX_KNOWN_HANDLES = 10000;
+const MAX_KNOWN_SNAPSHOTS = 200;
 
 export interface StoredEntry {
   name: string;
@@ -287,11 +292,26 @@ async function rememberKnownFiles(files: File[]): Promise<void> {
       merged.push({ name: file.name, file });
     }
   }
-  // Guard against unbounded growth. Entries are small — a name plus a file
-  // handle — but in the non-File-System-Access fallback they hold file contents,
-  // so the oldest are dropped once the list gets long.
-  const trimmed = merged.slice(Math.max(0, merged.length - MAX_KNOWN_ENTRIES));
-  await idbSet(KNOWN_KEY, trimmed);
+  await idbSet(KNOWN_KEY, trimKnownFiles(merged));
+}
+
+/**
+ * Keep each kind of entry within its own limit, dropping the oldest first and
+ * leaving the order alone. Handles are cheap, snapshots are not.
+ */
+function trimKnownFiles(entries: StoredEntry[]): StoredEntry[] {
+  const limits = { handle: MAX_KNOWN_HANDLES, snapshot: MAX_KNOWN_SNAPSHOTS };
+  const counts = { handle: 0, snapshot: 0 };
+  const kept = new Set<StoredEntry>();
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    const kind = entry.handle != null ? "handle" : "snapshot";
+    if (counts[kind] < limits[kind]) {
+      counts[kind] += 1;
+      kept.add(entry);
+    }
+  }
+  return entries.filter((entry) => kept.has(entry));
 }
 
 /**
