@@ -14,6 +14,8 @@
 const DB_NAME = "webamp-local-files";
 const STORE = "handles";
 const KEY = "playlist";
+// Handle of the playlist file saved from the playlist window's LIST OPTS menu.
+const LIST_FILE_KEY = "listFile";
 
 export interface StoredEntry {
   name: string;
@@ -188,4 +190,18 @@ export async function resolveStoredFiles(
     }
   }
   return files;
+}
+
+/**
+ * The playlist file the user last saved to, so that saving again overwrites
+ * that file instead of asking for a location every time — which is how Winamp
+ * behaves. Kept in the same store as the local-file entries.
+ */
+export async function getStoredListFile(): Promise<any | null> {
+  const handle = await idbGet<any>(LIST_FILE_KEY);
+  return handle ?? null;
+}
+
+export async function storeListFile(handle: any): Promise<void> {
+  await idbSet(LIST_FILE_KEY, handle ?? null);
 }
