@@ -3,15 +3,22 @@ import { getPlaylistTracks } from "../../webamp/js/selectors";
 import { storeLocalFiles } from "./localFiles";
 
 /**
- * Actions after which the stored local files are re-synced with the visible
- * playlist, so that a track the user removed does not come back on the next
- * start.
+ * Actions after which the *restore* list — what to offer on the next start — is
+ * re-synced with the visible playlist, so a track the user removed does not come
+ * back by itself.
  *
- * `REMOVE_ALL_TRACKS` ("NEW LIST") and the initial load are deliberately *not*
- * in this set: they are not "forget this track" actions. Clearing the playlist
- * used to wipe every remembered file, which also broke loading a saved list —
- * the files it points at were no longer known, so every one of them was
- * reported as forgotten.
+ * This touches only that restore list. Which files the app knows, i.e. the
+ * memory a saved playlist is matched against, is kept separately and is never
+ * pruned here: removing a track from the playlist is not a request to forget the
+ * file.
+ *
+ * Two actions are deliberately absent:
+ *
+ * - `LOAD_MEDIA_FILES_INITIAL` happens before the restore runs, and pruning
+ *   there emptied the restore list on every start.
+ * - `REMOVE_ALL_TRACKS` fires in the middle of loading a list (the library
+ *   clears the playlist before adding what the list contains), so pruning there
+ *   threw away the very files that had just been read from the list.
  */
 const PLAYLIST_CHANGING_ACTIONS = new Set([
   "REMOVE_TRACKS",

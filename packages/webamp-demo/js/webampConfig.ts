@@ -155,6 +155,10 @@ export async function getWebampConfig(
   setCustomMediaFileDialog(async () => {
     const entries = await pickAndStoreLocalFiles();
     const files = await resolveStoredFiles(entries);
+    // The picker writes the playlist entry; the files also have to go into the
+    // app's memory of known files, or a saved list could not find them again
+    // once the track has been removed from the playlist.
+    await rememberLocalFiles(files);
     return files.map((file) => ({
       blob: file,
       defaultName: file.name,
@@ -188,6 +192,7 @@ export async function getWebampConfig(
         filePicker: async () => {
           const entries = await pickAndStoreLocalFiles();
           const files = await resolveStoredFiles(entries);
+          await rememberLocalFiles(files);
           return files.map((file) => ({
             blob: file,
             defaultName: file.name,
