@@ -2,14 +2,23 @@ import { Middleware } from "../../webamp/js/types";
 import { getPlaylistTracks } from "../../webamp/js/selectors";
 import { storeLocalFiles } from "./localFiles";
 
+/**
+ * Actions after which the stored local files are re-synced with the visible
+ * playlist, so that a track the user removed does not come back on the next
+ * start.
+ *
+ * `REMOVE_ALL_TRACKS` ("NEW LIST") and the initial load are deliberately *not*
+ * in this set: they are not "forget this track" actions. Clearing the playlist
+ * used to wipe every remembered file, which also broke loading a saved list —
+ * the files it points at were no longer known, so every one of them was
+ * reported as forgotten.
+ */
 const PLAYLIST_CHANGING_ACTIONS = new Set([
   "REMOVE_TRACKS",
-  "REMOVE_ALL_TRACKS",
   "REVERSE_LIST",
   "RANDOMIZE_LIST",
   "SET_TRACK_ORDER",
   "DRAG_SELECTED",
-  "LOAD_MEDIA_FILES_INITIAL",
 ]);
 
 /**
@@ -18,35 +27,34 @@ const PLAYLIST_CHANGING_ACTIONS = new Set([
  * match the tracks still in the playlist (matched by name). Added files enter
  * the snapshot via setFilesAddedHandler; this middleware only prunes/reorders.
  */
-export const playlistSyncMiddleware: Middleware = (store) => (next) => (
-  action: any
-) => {
-  const result = next(action);
-  if (PLAYLIST_CHANGING_ACTIONS.has(action.type)) {
-    const state = store.getState();
-    const names = new Set(
-      getPlaylistTracks(state).map((t) => t.defaultName ?? t.title ?? "")
-    );
-    import("./localFiles").then(async ({ getStoredLocalFiles }) => {
-      const stored = await getStoredLocalFiles();
-      if (stored == null) {
-        return;
-      }
-      const kept = stored.filter((e) => names.has(e.name));
-      const ordered = [];
-      for (const name of names) {
-        const entry = kept.find((e) => e.name === name);
-        if (entry != null) {
-          ordered.push(entry);
+export const playlistSyncMiddleware: Middleware =
+  (store) => (next) => (action: any) => {
+    const result = next(action);
+    if (PLAYLIST_CHANGING_ACTIONS.has(action.type)) {
+      const state = store.getState();
+      const names = new Set(
+        getPlaylistTracks(state).map((t) => t.defaultName ?? t.title ?? "")
+      );
+      import("./localFiles").then(async ({ getStoredLocalFiles }) => {
+        const stored = await getStoredLocalFiles();
+        if (stored == null) {
+          return;
         }
-      }
-      if (
-        ordered.length !== stored.length ||
-        ordered.some((e, i) => e !== stored[i])
-      ) {
-        storeLocalFiles(ordered);
-      }
-    });
-  }
-  return result;
-};
+        const kept = stored.filter((e) => names.has(e.name));
+        const ordered = [];
+        for (const name of names) {
+          const entry = kept.find((e) => e.name === name);
+          if (entry != null) {
+            ordered.push(entry);
+          }
+        }
+        if (
+          ordered.length !== stored.length ||
+          ordered.some((e, i) => e !== stored[i])
+        ) {
+          storeLocalFiles(ordered);
+        }
+      });
+    }
+    return result;
+  };

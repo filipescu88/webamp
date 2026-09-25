@@ -30,12 +30,15 @@ import { confirmBar, promptForUrl } from "./winampPrompt";
 import {
   getStoredListFile,
   getStoredLocalFiles,
+  hasWritePermissionNow,
   readPermissionOf,
+  rememberLocalFiles,
   resolveStoredFiles,
   storeListFile,
   StoredEntry,
   supportsFileSystemAccess,
 } from "./localFiles";
+import type { DragEvent } from "react";
 
 const APP_ONLY_MESSAGE =
   "Listy można zapisywać i wczytywać tylko w zainstalowanej aplikacji. " +
@@ -139,32 +142,35 @@ function trackForFile(track: PlaylistTrack) {
 
 async function writeListFile(text: string): Promise<string | null> {
   const blob = new Blob([text], { type: "audio/x-mpegurl;charset=utf-8" });
-  let handle = sessionListFileHandle;
-  if (handle != null && !(await hasWritePermission(handle))) {
-    handle = null;
+  const previous = sessionListFileHandle;
+  const options: any = {
+    suggestedName: previous?.name ?? SUGGESTED_NAME,
+    types: [LIST_FILE_TYPE],
+  };
+  // Open next to the file used last time, when we may still look there. The
+  // name is only a suggestion: it is the dialog that lets the user keep several
+  // lists apart, so it is always shown rather than silently overwriting.
+  if (previous != null && (await hasWritePermissionNow(previous))) {
+    options.startIn = previous;
+  }
+  let handle: any;
+  try {
+    // @ts-ignore Not in all TS lib versions.
+    handle = await window.showSaveFilePicker(options);
+  } catch (err) {
+    if (!isAbortError(err)) {
+      showNotice(`Nie udało się otworzyć okna zapisu: ${describeError(err)}`);
+    }
+    return null;
   }
   if (handle == null) {
-    try {
-      // @ts-ignore Not in all TS lib versions.
-      handle = await window.showSaveFilePicker({
-        suggestedName: SUGGESTED_NAME,
-        types: [LIST_FILE_TYPE],
-      });
-    } catch (err) {
-      if (!isAbortError(err)) {
-        showNotice(`Nie udało się otworzyć okna zapisu: ${describeError(err)}`);
-      }
-      return null;
-    }
-    if (handle == null) {
-      return null;
-    }
-    sessionListFileHandle = handle;
-    try {
-      await storeListFile(handle);
-    } catch {
-      // Remembering the file is a convenience; failing to do so is not fatal.
-    }
+    return null;
+  }
+  sessionListFileHandle = handle;
+  try {
+    await storeListFile(handle);
+  } catch {
+    // Remembering the file is a convenience; failing to do so is not fatal.
   }
   try {
     const writable = await handle.createWritable();
@@ -174,21 +180,6 @@ async function writeListFile(text: string): Promise<string | null> {
   } catch (err) {
     showNotice(`Nie udało się zapisać listy: ${describeError(err)}`);
     return null;
-  }
-}
-
-async function hasWritePermission(handle: any): Promise<boolean> {
-  const opts = { mode: "readwrite" };
-  try {
-    if (typeof handle.queryPermission !== "function") {
-      return true;
-    }
-    if ((await handle.queryPermission(opts)) === "granted") {
-      return true;
-    }
-    return (await handle.requestPermission(opts)) === "granted";
-  } catch {
-    return false;
   }
 }
 
@@ -208,31 +199,44 @@ async function loadListFromFile(): Promise<Track[] | null> {
     showNotice(`Nie udało się odczytać pliku: ${describeError(err)}`);
     return null;
   }
+  const { tracks } = await tracksFromPlaylistText(text, "load");
+  return tracks.length === 0 ? null : tracks;
+}
+
+/**
+ * Turn the text of a playlist file into tracks. Shared by LOAD LIST and by
+ * dropping a playlist file on the player, which Winamp treats the same way.
+ */
+async function tracksFromPlaylistText(
+  text: string,
+  context: "load" | "drop"
+): Promise<{ tracks: Track[]; unknown: number; noAccess: number }> {
   if (looksLikeHlsPlaylist(text)) {
     showNotice(
       "Ten plik to manifest strumienia (HLS), a nie lista odtwarzania Winampa."
     );
-    return null;
+    return { tracks: [], unknown: 0, noAccess: 0 };
   }
   const entries = parsePlaylistFile(text);
   if (entries.length === 0) {
     showNotice("W tym pliku nie ma żadnych utworów.");
-    return null;
+    return { tracks: [], unknown: 0, noAccess: 0 };
   }
   const { tracks, unknown, noAccess } = await resolveEntries(entries);
   const skipped = unknown + noAccess;
   if (tracks.length === 0) {
     showNotice(messageForNothingLoaded(unknown, noAccess));
-    return null;
+    return { tracks, unknown, noAccess };
   }
   const skippedNote =
     skipped === 0
       ? ""
       : `, pominięto ${skipped} (${describeSkipped(unknown, noAccess)})`;
+  const verb = context === "drop" ? "Dodano z listy" : "Wczytano listę";
   showNotice(
-    `Wczytano listę: ${tracks.length} ${trackWord(tracks.length)}${skippedNote}`
+    `${verb}: ${tracks.length} ${trackWord(tracks.length)}${skippedNote}`
   );
-  return tracks;
+  return { tracks, unknown, noAccess };
 }
 
 async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
@@ -354,6 +358,59 @@ function trackFromEntry(entry: ParsedPlaylistEntry, file?: File): Track {
     track.metaData = { artist: artist ?? "", title };
   }
   return track;
+}
+
+const PLAYLIST_FILENAME_MATCHER = /\.m3u8?$/i;
+
+/**
+ * Handle files dropped on the player. A dropped playlist file means "load this
+ * list", which is what it means in Winamp too — adding an `.m3u8` as a track
+ * just leaves an unplayable entry in the playlist.
+ *
+ * Returns null when the drop is none of our business, so the library can go on
+ * treating skins, EQ presets and audio files as before. The dropped files are
+ * captured *synchronously*: like `dataTransfer.items`, the file list is only
+ * readable while the drop event is being dispatched.
+ */
+export function handleDroppedListFiles(
+  e: DragEvent<HTMLDivElement>
+): Promise<Track[]> | null {
+  const dropped = Array.from(e.dataTransfer?.files ?? []);
+  if (!dropped.some((file) => PLAYLIST_FILENAME_MATCHER.test(file.name))) {
+    return null;
+  }
+  return expandDroppedFiles(dropped);
+}
+
+async function expandDroppedFiles(files: File[]): Promise<Track[]> {
+  const tracks: Track[] = [];
+  const plainFiles: File[] = [];
+  for (const file of files) {
+    if (PLAYLIST_FILENAME_MATCHER.test(file.name)) {
+      try {
+        const { tracks: fromList } = await tracksFromPlaylistText(
+          await file.text(),
+          "drop"
+        );
+        tracks.push(...fromList);
+      } catch (err) {
+        showNotice(
+          `Nie udało się odczytać ${file.name}: ${describeError(err)}`
+        );
+      }
+    } else {
+      plainFiles.push(file);
+    }
+  }
+  if (plainFiles.length > 0) {
+    // These bypass addTracksFromReferences(), so remember them here — otherwise
+    // they would not come back after a reload.
+    void rememberLocalFiles(plainFiles);
+    tracks.push(
+      ...plainFiles.map((file) => ({ blob: file, defaultName: file.name }))
+    );
+  }
+  return tracks;
 }
 
 interface PickedListFile {

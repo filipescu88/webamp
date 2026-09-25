@@ -197,7 +197,6 @@ export async function resolveStoredFiles(
  * only "prompt" needs a user gesture, so the caller has to ask for one.
  */
 export type ReadPermission = "granted" | "prompt" | "denied";
-
 export async function readPermissionOf(
   entry: StoredEntry
 ): Promise<ReadPermission> {
@@ -230,4 +229,37 @@ export async function getStoredListFile(): Promise<any | null> {
 
 export async function storeListFile(handle: any): Promise<void> {
   await idbSet(LIST_FILE_KEY, handle ?? null);
+}
+
+/**
+ * Remember files the user added — by drag&drop, "ADD FILE", a dropped folder or
+ * the file picker — merging them into the stored list and de-duplicating by
+ * name.
+ *
+ * These names are what a saved playlist is matched against on the way back, so
+ * this has to happen for every way a file can enter the playlist.
+ */
+export async function rememberLocalFiles(files: File[]): Promise<void> {
+  const stored = (await getStoredLocalFiles()) ?? [];
+  const merged: StoredEntry[] = [...stored];
+  for (const file of files) {
+    if (
+      !merged.some((entry) => entry.name === file.name && entry.file != null)
+    ) {
+      merged.push({ name: file.name, file });
+    }
+  }
+  await storeLocalFiles(merged);
+}
+
+/** Whether a remembered file can be written to right now, without prompting. */
+export async function hasWritePermissionNow(handle: any): Promise<boolean> {
+  try {
+    if (handle == null || typeof handle.queryPermission !== "function") {
+      return false;
+    }
+    return (await handle.queryPermission({ mode: "readwrite" })) === "granted";
+  } catch {
+    return false;
+  }
 }
