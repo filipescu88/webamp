@@ -2,7 +2,7 @@ import * as Selectors from "../selectors";
 
 import * as Utils from "../utils";
 
-import { computeAutoFit, Viewport } from "../autoFit";
+import { computeAutoFit, getFittingBox, Viewport } from "../autoFit";
 import { WINDOWS } from "../constants";
 import { getPositionDiff, SizeDiff } from "../resizeUtils";
 import { applyDiff } from "../snapUtils";
@@ -107,8 +107,26 @@ export function updateWindowPositions(
 }
 
 /**
- * Measure the space available to the windows. This is measured in CSS pixels,
- * i.e. before the display scale is applied.
+ * The size of the visual viewport: what the user can actually see right now.
+ *
+ * Returns `null` when the browser does not report it, or when the user has
+ * pinched to zoom — while zoomed the visual viewport is a small window into the
+ * page, and the UI should keep its size instead of trying to fit into it.
+ */
+function getVisualViewportSize(): Viewport | null {
+  const visualViewport = window.visualViewport;
+  if (
+    visualViewport == null ||
+    (visualViewport.scale != null && visualViewport.scale > 1)
+  ) {
+    return null;
+  }
+  return { width: visualViewport.width, height: visualViewport.height };
+}
+
+/**
+ * Measure the space available to the windows, in CSS pixels, i.e. before the
+ * display scale is applied.
  *
  * This deliberately avoids both alternatives:
  *
@@ -120,25 +138,27 @@ export function updateWindowPositions(
  *   "desktop" viewport (for example when the `viewport` meta tag is ignored).
  *   Fitting to that would leave the UI hanging off the right edge.
  *
- * `visualViewport` reports what is actually visible, so the fitted UI can never
- * be wider than the screen — not even when the user pinch-zooms.
+ * For the document we take the layout viewport. For a container we take its own
+ * box — but either way the answer is clamped to the visual viewport, because on
+ * a phone a box can include the space behind the browser's toolbars while the
+ * user only ever sees the part above them. That clamping is what keeps the
+ * fitted UI from ending up partly under Android's navigation bar.
  */
 function getViewportSize(parentDomNode: HTMLElement): Viewport {
   if (parentDomNode === document.body || !parentDomNode) {
     const { documentElement } = document;
-    const visualViewport = window.visualViewport;
-    return {
-      width:
-        visualViewport?.width ||
-        documentElement.clientWidth ||
-        window.innerWidth,
-      height:
-        visualViewport?.height ||
-        documentElement.clientHeight ||
-        window.innerHeight,
-    };
+    return getFittingBox(
+      {
+        width: documentElement.clientWidth || window.innerWidth,
+        height: documentElement.clientHeight || window.innerHeight,
+      },
+      getVisualViewportSize()
+    );
   }
-  return Utils.getElementSize(parentDomNode);
+  return getFittingBox(
+    Utils.getElementSize(parentDomNode),
+    getVisualViewportSize()
+  );
 }
 
 export function centerWindowsInContainer(
@@ -243,7 +263,7 @@ export function autoFitWindowsToViewport(parentDomNode: HTMLElement): Thunk {
       return;
     }
 
-    const { scale, viewport, playlistSize } = computeAutoFit({
+    const { scale, viewport, playlistSize, layoutSize } = computeAutoFit({
       viewport: getViewportSize(parentDomNode),
       windows: state.windows.genWindows,
     });
@@ -264,10 +284,14 @@ export function autoFitWindowsToViewport(parentDomNode: HTMLElement): Thunk {
 
     dispatch(
       centerWindows({
+        // Centre horizontally, but pin to the top: the playlist can only be
+        // resized in whole 29px steps, so there is always some leftover, and
+        // centering would split it into a visible strip of page above the UI.
+        // Pinned at the top, the whole leftover ends up below the playlist.
         left: 0,
         top: 0,
         width: viewport.width,
-        height: viewport.height,
+        height: layoutSize.height,
       })
     );
   };
