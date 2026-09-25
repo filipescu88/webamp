@@ -23,6 +23,11 @@ import {
   setCustomMediaFileDialog,
   setFilesAddedHandler,
 } from "../../webamp/js/actionCreators/files";
+import {
+  handleAddUrlEvent,
+  handleLoadListEvent,
+  handleSaveListEvent,
+} from "./playlistListHandlers";
 
 import {
   initialState,
@@ -198,6 +203,11 @@ export async function getWebampConfig(
     ],
     enableHotkeys: true,
     enableMediaSession: true,
+    // The playlist window's LIST OPTS menu: without these the library answers
+    // with `alert("Not supported in Webamp")`. See playlistListHandlers.ts.
+    handleSaveListEvent,
+    handleLoadListEvent,
+    handleAddUrlEvent,
     handleTrackDropEvent: (e) => {
       const trackJson = e.dataTransfer.getData("text/json");
       if (trackJson == null) {

@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import isButterchurnSupported from "butterchurn/dist/isSupported.min";
 import { getWebampConfig } from "./webampConfig";
 import * as SoundCloud from "./SoundCloud";
+import { attachListHost } from "./playlistListHandlers";
 
 import WebampLazy from "../../webamp/js/webampLazy";
 
@@ -128,6 +129,10 @@ async function main() {
   const config = await getWebampConfig(screenshot, skinUrl, soundcloudPlaylist);
 
   const webamp = new WebampLazy(config);
+
+  // The LIST OPTS hooks (save/load list, add URL) need the instance to read the
+  // playlist from, and the instance needs the hooks at construction time.
+  attachListHost(webamp);
 
   if (disableMarquee || screenshot) {
     webamp.store.dispatch({ type: "DISABLE_MARQUEE" });
