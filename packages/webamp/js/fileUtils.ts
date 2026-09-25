@@ -189,8 +189,11 @@ export function filenameFromUrl(url: string): string | null {
  * of music typically also holds cover art, cue sheets, logs and so on, none of
  * which belong in the playlist. Files dropped directly are passed through
  * untouched, so that skins and EQ presets keep working.
+ *
+ * Exported so that the demo can tell music from the files it should not
+ * remember — a dropped zip or cover image is not something to hold on to.
  */
-const AUDIO_FILENAME_MATCHER =
+export const AUDIO_FILENAME_MATCHER =
   /\.(mp3|mp2|m4a|m4b|aac|flac|ogg|oga|opus|weba|wav|aif|aiff|wma|asf|mpc|ape|wv|mka|mid|midi|mod|it|s3m|xm)$/i;
 
 // File entries dropped on macOS start with "._" and are not real files, and
