@@ -28,8 +28,8 @@ import { isInstalledApp } from "./appMode";
 import { showNotice } from "./notice";
 import { confirmBar, promptForUrl } from "./winampPrompt";
 import {
+  getKnownAndStoredFiles,
   getStoredListFile,
-  getStoredLocalFiles,
   hasWritePermissionNow,
   readPermissionOf,
   rememberLocalFiles,
@@ -244,7 +244,7 @@ async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
   unknown: number;
   noAccess: number;
 }> {
-  const stored = (await getStoredLocalFiles()) ?? [];
+  const stored = (await getKnownAndStoredFiles()) ?? [];
   const storedByName = new Map(stored.map((entry) => [entry.name, entry]));
   const wanted = new Map<string, StoredEntry>();
   for (const entry of entries) {
@@ -283,6 +283,11 @@ async function resolveEntries(entries: ParsedPlaylistEntry[]): Promise<{
     }
   }
   const fileByName = new Map(files.map((file) => [file.name, file]));
+  if (files.length > 0) {
+    // Files that came back from a saved list belong to the app's memory too, and
+    // to the playlist that gets offered on the next start.
+    await rememberLocalFiles(files);
+  }
 
   const tracks: Track[] = [];
   let unknown = 0;

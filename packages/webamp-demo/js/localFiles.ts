@@ -16,6 +16,12 @@ const STORE = "handles";
 const KEY = "playlist";
 // Handle of the playlist file saved from the playlist window's LIST OPTS menu.
 const LIST_FILE_KEY = "listFile";
+// Every file the app has ever been given, used to find a saved playlist's files
+// again. Separate from KEY (what to restore on the next start) because the two
+// have different lifetimes: clearing or trimming the playlist must not make the
+// app forget a file that a saved list still refers to.
+const KNOWN_KEY = "known";
+const MAX_KNOWN_ENTRIES = 500;
 
 export interface StoredEntry {
   name: string;
@@ -238,6 +244,11 @@ export async function storeListFile(handle: any): Promise<void> {
  *
  * These names are what a saved playlist is matched against on the way back, so
  * this has to happen for every way a file can enter the playlist.
+ *
+ * Written to two places with two different lifetimes: the restore list (what to
+ * offer on the next start, which mirrors the playlist) and the list of files the
+ * app knows (which is never pruned — removing a track from the playlist is not
+ * a request to forget the file, and a saved list may still point at it).
  */
 export async function rememberLocalFiles(files: File[]): Promise<void> {
   const stored = (await getStoredLocalFiles()) ?? [];
@@ -250,6 +261,44 @@ export async function rememberLocalFiles(files: File[]): Promise<void> {
     }
   }
   await storeLocalFiles(merged);
+  await rememberKnownFiles(files);
+}
+
+/**
+ * Every file the app has ever been given, used to find a saved playlist's files
+ * again. Deliberately never pruned: a file removed from the playlist should
+ * still be found when a list that mentions it is loaded.
+ */
+export async function getKnownFiles(): Promise<StoredEntry[]> {
+  const entries = await idbGet<StoredEntry[]>(KNOWN_KEY);
+  return entries ?? [];
+}
+
+async function rememberKnownFiles(files: File[]): Promise<void> {
+  const known = await getKnownFiles();
+  const merged = [...known];
+  for (const file of files) {
+    if (!merged.some((entry) => entry.name === file.name)) {
+      merged.push({ name: file.name, file });
+    }
+  }
+  // Guard against unbounded growth. Entries are small — a name plus a file
+  // handle — but in the non-File-System-Access fallback they hold file contents,
+  // so the oldest are dropped once the list gets long.
+  const trimmed = merged.slice(Math.max(0, merged.length - MAX_KNOWN_ENTRIES));
+  await idbSet(KNOWN_KEY, trimmed);
+}
+
+/**
+ * Everything the app can still find by name: the files it has seen before (and
+ * may still have permission for) first, then whatever the stored playlist
+ * refers to.
+ */
+export async function getKnownAndStoredFiles(): Promise<StoredEntry[]> {
+  const known = await getKnownFiles();
+  const stored = (await getStoredLocalFiles()) ?? [];
+  const seen = new Set(known.map((entry) => entry.name));
+  return known.concat(stored.filter((entry) => !seen.has(entry.name)));
 }
 
 /** Whether a remembered file can be written to right now, without prompting. */
