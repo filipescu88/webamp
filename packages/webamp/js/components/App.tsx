@@ -1,5 +1,6 @@
 import {
   useLayoutEffect,
+  useRef,
   useEffect,
   useState,
   useCallback,
@@ -52,6 +53,9 @@ export default function App({
   const browserWindowSizeChanged = useActionCreator(
     Actions.browserWindowSizeChanged
   );
+  const autoFitWindowsToViewport = useActionCreator(
+    Actions.autoFitWindowsToViewport
+  );
   const setFocusedWindow = useActionCreator(Actions.setFocusedWindow);
 
   const [webampNode] = useState(() => {
@@ -80,12 +84,17 @@ export default function App({
     };
   }, [webampNode, parentDomNode]);
 
+  // The resize handler reads this through a ref rather than a dependency, so
+  // that the effect is not torn down and rebuilt every time the search opens.
+  const searchOpenRef = useRef(searchOpen);
+  searchOpenRef.current = searchOpen;
+
   useEffect(() => {
     const handleWindowResize = () => {
       if (webampNode == null) {
         return;
       }
-      if (searchOpen) {
+      if (searchOpenRef.current) {
         // While the search panel is open, parts of the viewport changing size
         // are the on-screen keyboard coming and going, not the user resizing
         // the page. Refitting to that would rescale the whole UI mid-typing.
@@ -138,7 +147,16 @@ export default function App({
         scheduleWindowResize
       );
     };
-  }, [parentDomNode, browserWindowSizeChanged, webampNode, searchOpen]);
+  }, [parentDomNode, browserWindowSizeChanged, webampNode]);
+
+  // Opening or closing the search changes how much of the viewport is visible
+  // (on a phone the keyboard covers part of it), but it is not a browser
+  // resize. Only the auto-fit needs to react: running the full resize path
+  // would let `ensureWindowsAreOnScreen` reset the user's window sizes, which
+  // is what used to shrink the playlist back to its minimum.
+  useEffect(() => {
+    autoFitWindowsToViewport(parentDomNode);
+  }, [autoFitWindowsToViewport, parentDomNode, searchOpen]);
 
   useEffect(() => {
     if (onMount != null) {

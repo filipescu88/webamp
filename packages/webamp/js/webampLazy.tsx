@@ -509,7 +509,12 @@ class Webamp {
   }
 
   async _render(node: HTMLElement, contained: boolean): Promise<void> {
-    this.store.dispatch(Actions.centerWindowsInContainer(node, contained));
+    // Materialize the relative layout in the container's top-left corner. The
+    // classic Winamp look is the top-left corner of the desktop, not the middle
+    // of the page; auto-fit lays the windows out itself when it is enabled.
+    this.store.dispatch(
+      Actions.centerWindowsInContainer(node, contained, "topLeft")
+    );
     // Now that we know where we are being rendered, let auto-fit scale the
     // windows to the viewport, so that even the first paint is correct.
     this.store.dispatch(

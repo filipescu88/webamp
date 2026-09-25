@@ -155,15 +155,18 @@ function getViewportSize(parentDomNode: HTMLElement): Viewport {
       getVisualViewportSize()
     );
   }
-  return getFittingBox(
-    Utils.getElementSize(parentDomNode),
-    getVisualViewportSize()
-  );
+  // Deliberately not clamped to the visual viewport: this measurement is also
+  // what `ensureWindowsAreOnScreen` uses to decide whether the windows still fit
+  // on screen, and clamping it here would make that check stricter than it has
+  // ever been, resetting window sizes the user picked. Auto-fit clamps for
+  // itself, where fitting into the visible part is exactly what is wanted.
+  return Utils.getElementSize(parentDomNode);
 }
 
 export function centerWindowsInContainer(
   container: HTMLElement,
-  contained: boolean
+  contained: boolean,
+  align: Alignment = "center"
 ): Thunk {
   return (dispatch, getState) => {
     const state = getState();
@@ -171,7 +174,7 @@ export function centerWindowsInContainer(
       return;
     }
     // Window positions are in unscaled units, so the container has to be
-    // converted into those units before we can center within it.
+    // converted into those units before we can place the layout within it.
     const scale = Selectors.getScale(state);
     let left = 0;
     let top = 0;
@@ -182,12 +185,15 @@ export function centerWindowsInContainer(
     }
     const { scrollWidth, scrollHeight } = container;
     dispatch(
-      centerWindows({
-        left,
-        top,
-        width: scrollWidth / scale,
-        height: scrollHeight / scale,
-      })
+      centerWindows(
+        {
+          left,
+          top,
+          width: scrollWidth / scale,
+          height: scrollHeight / scale,
+        },
+        align
+      )
     );
   };
 }
@@ -209,7 +215,16 @@ type Box = {
   height: number;
 };
 
-export function centerWindows({ left, top, width, height }: Box): Thunk {
+/**
+ * `center` puts the layout in the middle of the box; `topLeft` puts its top-left
+ * corner in the box's top-left corner.
+ */
+export type Alignment = "center" | "topLeft";
+
+export function centerWindows(
+  { left, top, width, height }: Box,
+  align: Alignment = "center"
+): Thunk {
   return (dispatch, getState) => {
     const state = getState();
     const windowsInfo = Selectors.getWindowsInfo(state);
@@ -229,10 +244,16 @@ export function centerWindows({ left, top, width, height }: Box): Thunk {
     const boxHeight = bounding.bottom - bounding.top;
     const boxWidth = bounding.right - bounding.left;
 
-    const move = {
-      x: Math.ceil(left - bounding.left + (width - boxWidth) / 2),
-      y: Math.ceil(top - bounding.top + (height - boxHeight) / 2),
-    };
+    const move =
+      align === "topLeft"
+        ? {
+            x: Math.ceil(left - bounding.left),
+            y: Math.ceil(top - bounding.top),
+          }
+        : {
+            x: Math.ceil(left - bounding.left + (width - boxWidth) / 2),
+            y: Math.ceil(top - bounding.top + (height - boxHeight) / 2),
+          };
 
     const newPositions = windowsInfo.reduce(
       (pos, w) => ({
@@ -264,7 +285,13 @@ export function autoFitWindowsToViewport(parentDomNode: HTMLElement): Thunk {
     }
 
     const { scale, viewport, playlistSize, layoutSize } = computeAutoFit({
-      viewport: getViewportSize(parentDomNode),
+      // Fit into what is actually visible. On a phone the container can extend
+      // behind the browser's toolbars while the navigation bar sits over the
+      // bottom of it, so the visual viewport is the right box here.
+      viewport: getFittingBox(
+        getViewportSize(parentDomNode),
+        getVisualViewportSize()
+      ),
       windows: state.windows.genWindows,
     });
 
