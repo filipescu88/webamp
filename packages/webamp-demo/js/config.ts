@@ -1,10 +1,4 @@
 import { Track, URLTrack, PartialState } from "../../webamp/js/types";
-// @ts-ignore
-import lyubeKon from "../mp3/lyube-kon.mp3";
-// @ts-ignore
-import idzieZolnierz from "../mp3/idzie-zolnierz.mp3";
-// @ts-ignore
-import pokemony from "../mp3/pokemony.mp3";
 
 interface Config {
   initialTracks?: Track[];
@@ -39,35 +33,11 @@ if ("URLSearchParams" in window) {
 export const skinUrl = config.skinUrl ?? null;
 
 /**
- * The playlist a fresh page load starts with. These are bundled with the demo
- * (see `mp3/`), so they work offline and are always available.
+ * The playlist a fresh page load starts with. The demo no longer bundles any
+ * music: nothing is served from this repo, and the visitor brings their own
+ * files (or a saved list), which the app remembers for the next start.
  */
-export const defaultInitialTracks: URLTrack[] = [
-  {
-    url: lyubeKon,
-    duration: 224.64,
-    metaData: {
-      artist: "Matvey Music",
-      title: "ЛЮБЭ - Конь",
-    },
-  },
-  {
-    url: idzieZolnierz,
-    duration: 207.048,
-    metaData: {
-      artist: "Praktyka Arktyki",
-      title: "Jacek Kowalski - Idzie Żołnierz",
-    },
-  },
-  {
-    url: pokemony,
-    duration: 241.512,
-    metaData: {
-      artist: "Bartosz Kalinowski (Józef Pleśniak)",
-      title: "Bartek Kalinowski - Pokemony",
-    },
-  },
-];
+export const defaultInitialTracks: URLTrack[] = [];
 
 export const initialTracks = config.initialTracks || defaultInitialTracks;
 
