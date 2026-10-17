@@ -43,23 +43,14 @@
     "skin-info": "unzip -vl assets/skins/base-2.91.wsz",
     "build-presets": "node scripts/parsePresetFiles.js > presets/builtin.json"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/captbaritone/webamp.git",
-    "directory": "packages/webamp"
-  },
   "keywords": [
     "Winamp",
     "HTML5",
     "audio",
     "web-audio-api"
   ],
-  "author": "Jordan Eldredge <jordan@jordaneldredge.com>",
+  "author": "warsztatcyfrowy.pl",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/captbaritone/webamp/issues"
-  },
-  "homepage": "https://github.com/captbaritone/webamp/",
   "devDependencies": {
     "ani-cursor": "workspace:*",
     "butterchurn": "3.0.0-beta.5",

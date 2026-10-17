@@ -1,122 +1,61 @@
-[![gzip size](https://img.badgesize.io/https:/unpkg.com/webamp/built/webamp.lazy-bundle.min.js?label=gzip&compression=gzip)](https://bundlephobia.com/result?p=webamp)
-[![Discord](https://img.shields.io/discord/434058775012311061.svg)](https://webamp.org/chat)
+# win-amp.pl
 
-# Webamp
+Klasyczny **Winamp 2 w przeglądarce**: ten sam wygląd, te same skórki i to samo działanie, bez instalowania czegokolwiek. Serwis działa pod adresem **win-amp.pl**.
 
-A reimplementation of Winamp in HTML5 and JavaScript with full skin support.
-As seen on [TechCrunch], [Motherboard], [Gizmodo], Hacker News ([1], [2], [3], [4]), and [elsewhere](./packages/webamp/docs/press.md).
+Autor: [warsztatcyfrowy.pl](https://warsztatcyfrowy.pl)
 
-[![Screenshot of Webamp](https://raw.githubusercontent.com/captbaritone/webamp/master/packages/webamp-demo/images/preview.png)](https://webamp.org)
+![Zrzut ekranu](packages/webamp-demo/images/preview.png)
 
-Check out this [Twitter thread](https://twitter.com/captbaritone/status/961274714013319168) for an illustrated list of features. Works in modern versions of Edge, Firefox, Safari and Chrome. IE is [not supported](http://caniuse.com/#feat=audio-api).
+## Funkcje
 
-## Read the docs
+### Odtwarzanie muzyki
 
-**The [Webamp Documentation](https://docs.webamp.org) site contains detailed instructions showing how to add Webamp to your site and customize it to meet your needs.**
+- **Własne pliki** – przeciągnij pliki muzyczne na okno odtwarzacza albo wybierz je przyciskiem _Eject_ (lub w menu _Play → File..._). Obsługiwane są m.in. MP3, FLAC, OGG, WAV, M4A/AAC i Opus.
+- **Całe foldery** – po przeciągnięciu folderu odtwarzacz sam wyszukuje w nim utwory, także w podfolderach.
+- **Utwory z internetu** – w menu _LIST OPTS → ADD URL_ podajesz adres pliku lub listy odtwarzania.
+- **Informacje o utworze** – wykonawca, tytuł i czas trwania są odczytywane z tagów pliku i wyświetlane na przewijanym pasku.
+- **Tytuł karty** przeglądarki pokazuje aktualnie grany utwór, a sterowanie z klawiatury multimedialnej i z ekranu blokady telefonu działa jak w zwykłym odtwarzaczu.
 
-## About This Repository
+### Lista odtwarzania
 
-Webamp uses a [monorepo](https://en.wikipedia.org/wiki/Monorepo) approach, so in addition to the Webamp NPM module, this repository contains code for a few closely related projects and some pieces of Webamp which are published as standalone modules:
+- **Wyszukiwanie utworu** (_Jump to file_) – klawisz **J** otwiera wyszukiwarkę: wpisz fragment nazwy i odtwórz wybrany utwór.
+- **Zapisywanie i wczytywanie list** – _LIST OPTS → SAVE LIST / LOAD LIST_. Listy zapisują się jako pliki `.m3u8`, które otwiera również prawdziwy Winamp.
+- **Pamięć plików** – aplikacja pamięta dodane wcześniej pliki, więc po ponownym otwarciu strony lista wraca (czasem po kliknięciu _Przywróć_ i zgodzie na dostęp do plików), a zapisana lista odnajduje utwory bez ponownego wybierania ich z dysku.
+- Sortowanie, mieszanie (_Shuffle_), powtarzanie (_Repeat_), zaznaczanie i usuwanie utworów – jak w oryginale.
 
-- [`packages/webamp`](https://github.com/captbaritone/webamp/tree/master/packages/webamp): The [Webamp NPM module](https://www.npmjs.com/package/webamp)
-- [`packages/webamp-demo`](https://github.com/captbaritone/webamp/tree/master/packages/webamp-demo): The demo site which lives at [webamp.org](https://webamp.org)
-- [`packages/webamp-docs`](https://github.com/captbaritone/webamp/tree/master/packages/webamp-docs): The documentation site for Webamp the NPM library which lives at [docs.webamp.org](https://docs.webamp.org)
-- [`packages/ani-cursor`](https://github.com/captbaritone/webamp/tree/master/packages/ani-cursor): An NPM module for rendering animiated `.ani` cursors as CSS animations
-- [`packages/skin-database`](https://github.com/captbaritone/webamp/tree/master/packages/skin-database): The server component of https://skins.webamp.org which also runs our [Twitter bot](https://twitter.com/winampskins), and a Discord bot for our community chat
-- [`packages/winamp-eqf`](https://github.com/captbaritone/webamp/tree/master/packages/winamp-eqf): An NPM module for parsing and constructing Winamp equalizer preset files (`.eqf`)
-- [`packages/webamp-modern`](https://github.com/captbaritone/webamp/tree/master/packages/webamp-modern): A prototype exploring rendering "modern" Winamp skins in the browser
-- [`examples`](https://github.com/captbaritone/webamp/tree/master/examples): A few examples showing how to use the NPM module
+### Wygląd
 
-## Community
+- **Skórki Winampa** (`.wsz`) – kilka skórek leży na pulpicie strony (kliknij dwukrotnie, żeby włączyć). Własną skórkę wystarczy przeciągnąć na odtwarzacz.
+- **Korektor graficzny** z presetami, także wczytywanymi z plików `.eqf` Winampa.
+- **Wizualizacja Milkdrop** – psychodeliczne animacje w rytm muzyki, z możliwością przełączania na pełny ekran.
+- **Tryb podwójnego rozmiaru**, przesuwanie i dokowanie okien, animowane kursory ze skórek.
+- **Telefony i małe ekrany** – interfejs sam dopasowuje się do szerokości ekranu, a lista odtwarzania wypełnia resztę miejsca.
 
-Join our community chat on Discord: <https://discord.gg/fBTDMqR>
+### Aplikacja na komputerze
 
-Related communites:
+W Chrome lub Edge stronę można zainstalować jako aplikację (menu ⋮ → _Zainstaluj win-amp.pl jako aplikację_). Otwiera się wtedy we własnym oknie, a zapisywanie i wczytywanie list działa bezpośrednio na plikach na dysku.
 
-- [Winamp Community Update Pack] - "New plug-ins to add additional features to Winamp as well as replacement plug-ins to provide better implementations of some of the plug-ins natively included with Winamp". ([Forum](https://getwacup.com/community/) / [Discord server](https://discord.gg/5pVTdbj))
+## Uruchomienie u siebie
 
-## In the Wild
-
-An incomplete list of websites using Webamp:
-
-- [Internet Archive](https://blog.archive.org/2018/10/02/dont-click-on-the-llama/) - The Internet Archive lets you preview winamp skins and listen to audio tracks using Webamp
-- [Winampify.io](https://winampify.io/) - An online Spotify client using Webamp
-- [Webamp Desktop](https://desktop.webamp.org/) - An Electron app version of Webamp
-- [98.js.org](https://98.js.org/) - A Windows 98 clone in JavaScript ([GitHub](https://github.com/1j01/98))
-- [winxp.now.sh](https://winxp.now.sh/) - A Windows XP clone in JavaScript with React ([GitHub](https://github.com/ShizukuIchi))
-- [Try Andy's Desk](https://desk.glitchy.website/) - A quirky Windows themed desktop experience.
-- [www.dkdomino.zone](https://www.dkdomino.zone/album.html) - Someone's personal music player
-- [Bamp](https://www.bamp.skin) - A web app for a tool that converts winamp skins to/from a format that streamlines skin design. ([GitHub](https://github.com/dp-mason/bamp))
-
-## Thanks
-
-- [Butterchurn](https://github.com/jberg/butterchurn), the amazing Milkdrop 2 WebGL implementation. Built and integrated into Webamp by: [jberg](https://github.com/jberg)
-- Research and feature prototyping: @PAEz
-- Beta feedback, catching many small UI inconsistencies: [LuigiHann](https://twitter.com/LuigiHann)
-- Beta feedback and insider answers to obscure Winamp questions: [Darren Owen](https://twitter.com/The_DoctorO)
-- Donating the `webamp` NPM module name: [Dave Eddy](http://daveeddy.com/)
-
-Thank you to [Justin Frankel](http://www.1014.org/) and everyone at Nullsoft
-for Winamp which inspired so many of us.
-
-## License
-
-While the Winamp name, interface, and, sample audio file are surely property of
-Nullsoft, the code within this project is released under the [MIT
-License](LICENSE.txt). That being said, if you do anything interesting with
-this code, please let me know. I'd love to see it.
-
-## Development
-
-This repository uses [Turborepo](https://turbo.build/) for efficient monorepo management. Turborepo provides intelligent caching and parallel execution of tasks across all packages.
-
-### Quick Start
+Potrzebne są Node.js 22 i pnpm 9.
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build all packages (automatically handles dependencies)
-npx turbo build
-
-# Build library bundles for packages that need them
-npx turbo build-library
-
-# Run all tests
-npx turbo test
-
-# Lint and type-check all packages
-npx turbo lint type-check
-
-# Work on a specific package and its dependencies
-npx turbo dev --filter="webamp"
+pnpm install   # instalacja zależności
+pnpm start     # serwer deweloperski z podglądem na żywo
+pnpm build     # wersja produkcyjna w packages/webamp-demo/dist
 ```
 
-### Package Dependencies
+## Publikacja
 
-The monorepo dependency graph is automatically managed by Turborepo:
+Strona aktualizuje się sama: każda zmiana wysłana na gałąź `master` uruchamia w GitHub Actions workflow _Publikacja strony na GitHub Pages_ (`.github/workflows/deploy-pages.yml`), który buduje stronę i ją publikuje. Można go też uruchomić ręcznie w zakładce _Actions_ przyciskiem _Run workflow_.
 
-- `ani-cursor` and `winamp-eqf` are standalone packages built with TypeScript
-- `webamp` depends on both `ani-cursor` and `winamp-eqf` for workspace linking
-- All packages are built in the correct topological order
-- Builds are cached and only rebuild what has changed
+## Struktura repozytorium
 
-### Available Tasks
+- `packages/webamp-demo` – strona win-amp.pl (pulpit, skórki, zapisywanie list, pamięć plików).
+- `packages/webamp` – silnik odtwarzacza: okna, skórki, korektor, lista odtwarzania.
+- `packages/ani-cursor` – obsługa animowanych kursorów `.ani` ze skórek.
+- `packages/winamp-eqf` – odczyt i zapis presetów korektora `.eqf`.
 
-- `build` - Main build output (Vite for demos, TypeScript compilation for libraries)
-- `build-library` - Library bundles for NPM publishing (only applies to `webamp`)
-- `test` - Run unit tests with Jest
-- `type-check` - TypeScript type checking without emitting files
-- `lint` - ESLint code quality checks
-- `dev` - Development server (for packages that support it)
+## Licencja
 
-For more details on individual packages, see their respective README files.
-
-[techcrunch]: https://techcrunch.com/2018/02/09/whip-the-llamas-ass-with-this-javascript-winamp-emulator/
-[motherboard]: https://motherboard.vice.com/en_us/article/qvebbv/winamp-2-mp3-music-player-emulator
-[gizmodo]: https://gizmodo.com/winamp-2-has-been-immortalized-in-html5-for-your-pleasu-1655373653
-[1]: https://news.ycombinator.com/item?id=8565665
-[2]: https://news.ycombinator.com/item?id=15314629
-[3]: https://news.ycombinator.com/item?id=16333550
-[4]: https://news.ycombinator.com/item?id=17583997
-[winamp community update pack]: https://getwacup.com/
+Kod jest udostępniony na licencji MIT (plik [LICENSE.txt](LICENSE.txt)). Serwis powstał na bazie projektu open source Webamp autorstwa Jordana Eldredge'a; zgodnie z licencją MIT jego informacja o prawach autorskich pozostaje w pliku licencji. Nazwa i wygląd Winampa należą do ich właścicieli.

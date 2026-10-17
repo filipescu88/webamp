@@ -4,4 +4,3 @@ package.json
 built/*
 demo/built/*
 coverage/*
-examples/webpack/bundle.js

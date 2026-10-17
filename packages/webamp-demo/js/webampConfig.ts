@@ -1,12 +1,8 @@
-import * as Sentry from "@sentry/browser";
-// @ts-ignore
-import createMiddleware from "redux-sentry-middleware";
 // @ts-ignore
 import isButterchurnSupported from "butterchurn/dist/isSupported.min";
-import { loggerMiddleware } from "./eventLogger";
 import * as SoundCloud from "./SoundCloud";
 
-import { Action, Options, AppState, WindowLayout } from "../../webamp/js/types";
+import { Options, WindowLayout } from "../../webamp/js/types";
 import { WINDOW_HEIGHT } from "../../webamp/js/constants";
 
 import { getButterchurnOptions } from "./butterchurnOptions";
@@ -39,15 +35,6 @@ import {
 } from "../../webamp/js/webampLazy";
 import { playlistSyncMiddleware } from "./playlistSyncMiddleware";
 
-const NOISY_ACTION_TYPES = new Set([
-  "STEP_MARQUEE",
-  "UPDATE_TIME_ELAPSED",
-  "UPDATE_WINDOW_POSITIONS",
-  "SET_VOLUME",
-  "SET_BALANCE",
-  "SET_BAND_VALUE",
-]);
-
 const MIN_MILKDROP_WIDTH = 725;
 
 /**
@@ -61,23 +48,6 @@ function isSmallViewport(): boolean {
     window.innerWidth < 700 || window.matchMedia("(pointer: coarse)").matches
   );
 }
-
-let lastActionType: string | null = null;
-
-// Filter out consecutive common actions
-function filterBreadcrumbActions(action: Action) {
-  const noisy =
-    lastActionType != null &&
-    NOISY_ACTION_TYPES.has(action.type) &&
-    NOISY_ACTION_TYPES.has(lastActionType);
-  lastActionType = action.type;
-  return !noisy;
-}
-
-const sentryMiddleware = createMiddleware(Sentry, {
-  filterBreadcrumbActions,
-  stateTransformer: getDebugData,
-});
 
 export async function getWebampConfig(
   screenshot: boolean,
@@ -233,23 +203,6 @@ export async function getWebampConfig(
       import(/* webpackChunkName: "music-metadata" */ "music-metadata"),
     __initialState: screenshot ? screenshotInitialState : initialState,
     __butterchurnOptions,
-    __customMiddlewares: [
-      sentryMiddleware,
-      loggerMiddleware,
-      playlistSyncMiddleware,
-    ],
-  };
-}
-
-function getDebugData(state: AppState) {
-  return {
-    ...state,
-    display: {
-      ...state.display,
-      skinGenLetterWidths: "[[REDACTED]]",
-      skinImages: "[[REDACTED]]",
-      skinCursors: "[[REDACTED]]",
-      skinRegion: "[[REDACTED]]",
-    },
+    __customMiddlewares: [playlistSyncMiddleware],
   };
 }

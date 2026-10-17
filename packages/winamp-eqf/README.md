@@ -1,33 +1,25 @@
-# Winamp Equalizer Preset Parser
+# winamp-eqf
 
-Winamp allows you to save your equalizer settings to `.eqf` file. This package allows you to parse these files.
+Odczyt i zapis presetów korektora Winampa (pliki `.eqf` i `winamp.q1`).
 
-## Installation
-
-```bash
-npm install --save winamp-eqf
-```
-
-## Usage
+## Użycie
 
 ```typescript
-import { parser, creator, EqfData, CreateEqfData } from "winamp-eqf";
+import { parser, creator, EqfData } from "winamp-eqf";
 
-// ... Get your .eqf or .q1 file as an ArrayBuffer
+// plik .eqf lub .q1 jako ArrayBuffer
 const eqf: EqfData = parser(eqfArrayBuffer);
 
-const eqfArrayBuffer: ArrayBuffer = creator(eqf);
+const buffer: ArrayBuffer = creator(eqf);
 ```
-
-This package is an ES module and requires Node.js 14+ or a modern bundler that supports ES modules.
 
 ## API
 
-This package is written in TypeScript and provides full type definitions.
+Pakiet jest napisany w TypeScripcie i ma pełne definicje typów.
 
 ### `parser(ArrayBuffer): EqfData`
 
-#### Return value
+#### Zwracana wartość
 
 ```JavaScript
 {
@@ -46,7 +38,7 @@ This package is written in TypeScript and provides full type definitions.
       "hz14000": 64,
       "hz16000": 64,
     },
-    // Some files, such as winamp.q1, may contain multiple preset objects.
+    // Niektóre pliki, np. winamp.q1, zawierają kilka presetów.
   ],
   "type": "Winamp EQ library file v1.1",
 }
@@ -54,35 +46,10 @@ This package is written in TypeScript and provides full type definitions.
 
 ### `creator(eqfObject: CreateEqfData): ArrayBuffer`
 
-#### Return Value: `ArrayBuffer`
+#### Zwracana wartość: `ArrayBuffer`
 
-`eqfObject` is an object with the same shape as that returned by `parser()`.
+`eqfObject` ma taki sam kształt jak wynik `parser()`.
 
-## Source Material
+## Format pliku
 
-Starting with this spec found here: <http://www.perlmonks.org/bare/?node_id=584875>:
-
-> I've taken a look at some EQF files that I made for the purpose. The format is apparently very simple:
-> The file is 299 bytes long.
->
-> It starts with a text header, which in my case, is 37 bytes long. It is, in double-quotish notation — note the control-Z character:
->
-> Winamp EQ library file v1.1\cZ!--Entry1
->
-> Next is a block of null bytes ("\0") up till the next, final part.
-> The real data is stored in the last 11 bytes of the file: the last byte is for the general volume, the 10 bytes before that are for each of the 10 EQ controls, in ascending order: the first of these 10 for the deepest bass, the last one (right in front of the volume byte) is for the highest treble.
-> The values are 0x20 in neutral position, and are reversed in value: 0x00 is maximum, 0x3F is minimum. So there are 31 positions below, and 31 32 levels above neutral.
-
-Additionally, I got some info from [Darren Owen](https://twitter.com/The_DoctorO) via Twitter:
-
-<https://twitter.com/The_DoctorO/status/856223002530373632>
-
-> Not that i'm aware off as sadly documentation of things was never great. Looking at the link vs files in a hex editor it seems mostly right.
-
-> The current 1.1 format should be fine as I don't believe the format has changed for a very long time :)
-
-And then via direct message:
-
-> Will do it here as I can type a bit more, but the only obvious thing wrong with the link is the signature assumption as it's not guaranteed to be 'entry1' As you can have multiple eq blocks in a file.
-
-> If you've looked at winamp.q1 you should see multiple presets in that file which follow one after each other so the file signature (winamp.q1 or a specific \*.eqf file) is "Winamp EQ library file v1.1\x1A!--" (pulled that out from the disassembler) it's then a 257 byte buffer (256 + null character to terminate correctly) then the 10 byte block relating to the eq sliders (need to double-check the range base) followed by the 1 byte for the preamp slider then if there's more presets in the file, they follow on immediately after with the name block looking at the preamp slider, -12dB = 0x3F, 0dB = 0x1F, 12dB = 0 (so a 0-63 range) that seems to be the same for the other sliders (and matches 1:1 with the sdk details) and I think that's it :) in the winamp.q1 file, the 'default' entry is either a flat preset or what's been saved after customisation (in-case you're wanting to mirror the native behaviour via the preset -> save -> default action)
+Plik zaczyna się nagłówkiem `Winamp EQ library file v1.1\x1A!--`. Każdy preset to 257-bajtowa nazwa zakończona bajtem zerowym, 10 bajtów suwaków korektora (od najniższych do najwyższych częstotliwości) i 1 bajt wzmocnienia (preamp). Wartości mają zakres 0–63 i są odwrócone: `0x3F` to −12 dB, `0x1F` to 0 dB, `0` to +12 dB. Kolejne presety (np. w `winamp.q1`) następują bezpośrednio po sobie.

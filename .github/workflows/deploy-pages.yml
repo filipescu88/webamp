@@ -1,4 +1,4 @@
-name: Deploy demo to GitHub Pages
+name: Publikacja strony na GitHub Pages
 
 on:
   push:
@@ -19,22 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install pnpm
+      - name: Instalacja pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9.12.0
-      - name: Use Node.js 22
+      - name: Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - name: Install dependencies
+      - name: Instalacja zależności
         run: pnpm install --frozen-lockfile
-      - name: Build webamp-demo
+      - name: Budowanie strony
         run: npx turbo build --filter=webamp-demo
         env:
           NODE_ENV: production
-      - name: Upload Pages artifact
+      - name: Wysłanie plików strony
         uses: actions/upload-pages-artifact@v3
         with:
           path: packages/webamp-demo/dist

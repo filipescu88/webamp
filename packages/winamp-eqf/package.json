@@ -11,15 +11,6 @@
       "types": "./built/index.d.ts"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/captbaritone/webamp.git",
-    "directory": "packages/winamp-eqf"
-  },
-  "bugs": {
-    "url": "https://github.com/captbaritone/webamp/issues"
-  },
-  "homepage": "https://github.com/captbaritone/webamp/tree/master/packages/winamp-eqf",
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
@@ -38,7 +29,7 @@
     "parse",
     "create"
   ],
-  "author": "Jordan Eldredge",
+  "author": "warsztatcyfrowy.pl",
   "license": "ISC",
   "engines": {
     "node": ">=22.0.0"
@@ -55,12 +46,16 @@
       "built"
     ],
     "testEnvironment": "jsdom",
-    "extensionsToTreatAsEsm": [".ts"],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "transform": {
-      "^.+\\.(t|j)sx?$": ["@swc/jest"]
+      "^.+\\.(t|j)sx?$": [
+        "@swc/jest"
+      ]
     }
   }
 }

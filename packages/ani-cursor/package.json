@@ -15,20 +15,11 @@
     "dist/",
     "src/**/*.ts"
   ],
-  "author": "Jordan Eldredge <jordan@jordaneldredge.com>",
+  "author": "warsztatcyfrowy.pl",
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/captbaritone/webamp.git",
-    "directory": "packages/ani-cursor"
-  },
-  "bugs": {
-    "url": "https://github.com/captbaritone/webamp/issues"
-  },
-  "homepage": "https://github.com/captbaritone/webamp/tree/master/packages/ani-cursor",
   "scripts": {
     "build": "tsc",
     "type-check": "tsc --noEmit",
@@ -53,12 +44,16 @@
       "dist"
     ],
     "testEnvironment": "jsdom",
-    "extensionsToTreatAsEsm": [".ts"],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "transform": {
-      "^.+\\.(t|j)sx?$": ["@swc/jest"]
+      "^.+\\.(t|j)sx?$": [
+        "@swc/jest"
+      ]
     }
   }
 }

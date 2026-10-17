@@ -1,10 +1,7 @@
 {
-  "name": "webamp-monorepo",
+  "name": "win-amp",
   "private": true,
   "packageManager": "pnpm@9.12.0",
-  "overrides": {
-    "graphql": "16.8.1"
-  },
   "engines": {
     "node": ">=22.0.0"
   },
@@ -12,11 +9,11 @@
     "test": "npx turbo test",
     "test:integration": "npx turbo run integration-tests",
     "test:all": "npx turbo run test integration-tests",
-    "test:unit": "jest",
     "lint": "npx turbo lint",
-    "type-check": "pnpm --filter webamp type-check && pnpm --filter ani-cursor type-check && pnpm --filter skin-database type-check && pnpm --filter webamp-docs type-check && pnpm --filter winamp-eqf type-check",
-    "deploy": "npx turbo build webamp-modern#build --concurrency 1 && mv packages/webamp-modern/build packages/webamp-demo/dist/modern",
-    "format": "prettier --write '**/*.{js,ts,tsx}'"
+    "type-check": "pnpm --filter webamp type-check && pnpm --filter ani-cursor type-check && pnpm --filter winamp-eqf type-check",
+    "format": "prettier --write '**/*.{js,ts,tsx}'",
+    "start": "pnpm --filter webamp-demo start",
+    "build": "npx turbo build --filter=webamp-demo"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.16.7",
@@ -48,5 +45,7 @@
     "patchedDependencies": {
       "butterchurn@3.0.0-beta.5": "patches/butterchurn@3.0.0-beta.5.patch"
     }
-  }
+  },
+  "description": "win-amp.pl – Winamp 2 w przeglądarce. Autor: warsztatcyfrowy.pl",
+  "author": "warsztatcyfrowy.pl"
 }
