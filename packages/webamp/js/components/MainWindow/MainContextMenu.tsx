@@ -33,9 +33,9 @@ const MainContextMenu = memo(({ filePickers }: Props) => {
   return (
     <Fragment>
       <LinkNode
-        href="https://webamp.org/about"
+        href="https://warsztatcyfrowy.pl"
         target="_blank"
-        label="Webamp..."
+        label="Autor: warsztatcyfrowy.pl"
       />
       <Hr />
       <Parent label="Play">

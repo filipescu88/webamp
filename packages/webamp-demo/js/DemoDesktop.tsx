@@ -8,7 +8,6 @@ import { useWindowSize } from "../../webamp/js/hooks";
 import availableSkins from "./availableSkins";
 import DesktopLinkIcon from "./DesktopLinkIcon";
 import museumIcon from "../images/icons/internet-folder-32x32.png";
-import soundcloudIcon from "../images/icons/soundcloud-32x32.png";
 import { SoundCloudPlaylist } from "./SoundCloud";
 import RestorePlaylistBar from "./RestorePlaylistBar";
 // import MilkIcon from "./MilkIcon";
@@ -23,7 +22,7 @@ const ICON_HEIGHT = 100;
 const VERTICAL_MARGIN = 30;
 const HORIZONTAL_MARGIN = 10;
 
-const DemoDesktop = ({ webamp, soundCloudPlaylist }: Props) => {
+const DemoDesktop = ({ webamp }: Props) => {
   const { width } = useWindowSize();
   const visibleWidth = width - VERTICAL_MARGIN * 2;
 
@@ -52,19 +51,10 @@ const DemoDesktop = ({ webamp, soundCloudPlaylist }: Props) => {
       />
       */ <DesktopLinkIcon
         iconUrl={museumIcon}
-        name="Winamp Skin Musuem"
-        href={"https://skins.webamp.org"}
+        name="warsztatcyfrowy.pl"
+        href={"https://warsztatcyfrowy.pl"}
       />
     );
-    if (soundCloudPlaylist != null) {
-      icons.push(
-        <DesktopLinkIcon
-          iconUrl={soundcloudIcon}
-          name={soundCloudPlaylist.title}
-          href={soundCloudPlaylist.permalink_url}
-        />
-      );
-    }
   }
   return (
     <div

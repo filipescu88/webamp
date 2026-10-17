@@ -129,8 +129,8 @@ const MainWindow = React.memo(({ analyser, filePickers }: Props) => {
         <a
           id="about"
           target="_blank"
-          href="https://webamp.org/about"
-          title="About"
+          href="https://warsztatcyfrowy.pl"
+          title="Autor: warsztatcyfrowy.pl"
         />
       </FocusTarget>
     </DropTarget>
